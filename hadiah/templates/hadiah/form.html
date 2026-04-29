@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}
+  {% if mode == 'create' %}Tambah Hadiah{% else %}Edit Hadiah{% endif %} — AeroMiles
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-card   { max-width: 640px; margin: 0 auto; }
+  .form-label  { font-size: .85rem; font-weight: 500; color: #495057; }
+  .field-ro    { background: #f8f9fa; color: #6c757d; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <nav style="font-size:.85rem;" class="mb-3">
+    <a href="{% url 'hadiah:hadiah_list' %}" class="text-decoration-none text-muted">Kelola Hadiah</a>
+    <span class="mx-1 text-muted">/</span>
+    <span>{% if mode == 'create' %}Tambah Hadiah{% else %}Edit Hadiah{% endif %}</span>
+  </nav>
+
+  <div class="mb-4">
+    <h5 class="fw-semibold mb-0">
+      {% if mode == 'create' %}Tambah Hadiah Baru{% else %}Edit Hadiah{% endif %}
+    </h5>
+    {% if mode == 'update' %}
+      <small class="text-muted">Kode hadiah tidak dapat diubah.</small>
+    {% endif %}
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if mode == 'update' %}
+    <div class="mb-3">
+      <label class="form-label">Kode Hadiah</label>
+      <input type="text" class="form-control field-ro"
+             value="{{ hadiah.kode_hadiah }}" readonly>
+      <div class="form-text">Kode hadiah tidak dapat diubah.</div>
+    </div>
+    {% endif %}
+
+    <div class="mb-3">
+      <label class="form-label">Nama Hadiah <span class="text-danger">*</span></label>
+      <input type="text" name="nama" class="form-control"
+             placeholder="cth. Tiket Domestik PP"
+             value="{% if form_data %}{{ form_data.nama }}{% elif hadiah %}{{ hadiah.nama }}{% endif %}"
+             required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Penyedia <span class="text-danger">*</span></label>
+      <select name="id_penyedia" class="form-select" required>
+        <option value="">Pilih penyedia…</option>
+        {% for p in penyedia_list %}
+          <option value="{{ p.id }}"
+            {% if form_data and form_data.id_penyedia == p.id|stringformat:"s" %}selected
+            {% elif hadiah and hadiah.id_penyedia.id == p.id %}selected
+            {% endif %}>
+            {{ p.get_nama }}{% if p.mitra %} (partner){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Pilih dari Maskapai atau Mitra yang sudah terdaftar.</div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Miles yang Dibutuhkan <span class="text-danger">*</span></label>
+      <input type="number" name="miles" class="form-control" min="1"
+             placeholder="cth. 15000"
+             value="{% if form_data %}{{ form_data.miles }}{% elif hadiah %}{{ hadiah.miles }}{% endif %}"
+             required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Deskripsi</label>
+      <textarea name="deskripsi" class="form-control" rows="3"
+                placeholder="Deskripsi singkat hadiah…">{% if form_data %}{{ form_data.deskripsi }}{% elif hadiah %}{{ hadiah.deskripsi }}{% endif %}</textarea>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-6">
+        <label class="form-label">Valid Start Date <span class="text-danger">*</span></label>
+        <input type="date" name="valid_start_date" class="form-control"
+               value="{% if form_data %}{{ form_data.valid_start_date }}{% elif hadiah %}{{ hadiah.valid_start_date|date:'Y-m-d' }}{% endif %}"
+               required>
+      </div>
+      <div class="col-6">
+        <label class="form-label">Program End <span class="text-danger">*</span></label>
+        <input type="date" name="program_end" class="form-control"
+               value="{% if form_data %}{{ form_data.program_end }}{% elif hadiah %}{{ hadiah.program_end|date:'Y-m-d' }}{% endif %}"
+               required>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm px-4">
+        {% if mode == 'create' %}Simpan Hadiah{% else %}Simpan Perubahan{% endif %}
+      </button>
+      <a href="{% url 'hadiah:hadiah_list' %}" class="btn btn-outline-secondary btn-sm px-3">Batal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
