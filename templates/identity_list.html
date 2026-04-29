@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Identitas Saya</h3>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahIdentitasModal">+ Tambah Identitas Baru</button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>No. Dokumen</th>
+                    <th>Jenis Dokumen</th>
+                    <th>Negara Penerbit</th>
+                    <th>Tanggal Terbit</th>
+                    <th>Tanggal Habis</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in identities %}
+                <tr>
+                    <td class="align-middle fw-bold">{{ i.no }}</td>
+                    <td class="align-middle">{{ i.jenis }}</td>
+                    <td class="align-middle">{{ i.negara }}</td>
+                    <td class="align-middle">{{ i.terbit }}</td>
+                    <td class="align-middle">{{ i.habis }}</td>
+                    <td class="align-middle">
+                        {% if i.status == 'Kedaluwarsa' %}
+                            <span class="badge bg-danger">Kedaluwarsa</span>
+                        {% else %}
+                            <span class="badge bg-success">Aktif</span>
+                        {% endif %}
+                    </td>
+                    <td class="align-middle">
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editIdentitasModal">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#hapusIdentitasModal">Hapus</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="tambahIdentitasModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">Tambah Identitas Baru</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+              <div class="mb-3">
+                  <label class="form-label">Nomor Dokumen *</label>
+                  <input type="text" class="form-control" placeholder="Contoh: A12345678" required>
+                  <div class="form-text">Nomor dokumen harus unik.</div>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Jenis Dokumen *</label>
+                  <select class="form-select" required>
+                      <option value="" disabled selected>Pilih Jenis...</option>
+                      <option value="Paspor">Paspor</option>
+                      <option value="KTP">KTP</option>
+                      <option value="SIM">SIM</option>
+                  </select>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Negara Penerbit *</label>
+                  <select class="form-select" required>
+                      <option>Indonesia</option>
+                      <option>Malaysia</option>
+                      <option>Singapura</option>
+                  </select>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label">Tanggal Terbit *</label>
+                      <input type="date" class="form-control" required>
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label">Tanggal Habis *</label>
+                      <input type="date" class="form-control" required>
+                  </div>
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary">Simpan Identitas</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editIdentitasModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">Edit Identitas</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+              <div class="mb-3">
+                  <label class="form-label text-muted">Nomor Dokumen (Tidak dapat diubah)</label>
+                  <input type="text" class="form-control bg-light" value="3275012345678901" readonly>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Jenis Dokumen</label>
+                  <select class="form-select">
+                      <option value="Paspor">Paspor</option>
+                      <option value="KTP" selected>KTP</option>
+                      <option value="SIM">SIM</option>
+                  </select>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Negara Penerbit</label>
+                  <select class="form-select">
+                      <option selected>Indonesia</option>
+                      <option>Malaysia</option>
+                  </select>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label">Tanggal Terbit</label>
+                      <input type="date" class="form-control" value="2010-06-01">
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label text-primary fw-bold">Perpanjang Tanggal Habis</label>
+                      <input type="date" class="form-control border-primary" value="2024-06-01">
+                  </div>
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary">Simpan Perubahan</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="hapusIdentitasModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-danger">
+        <div class="modal-body text-center pt-4 pb-3">
+          <h4 class="text-danger mb-3">Hapus Identitas?</h4>
+          <p class="text-muted">Tindakan ini tidak dapat dibatalkan. Dokumen ini akan dihapus dari daftar identitas Anda.</p>
+        </div>
+        <div class="modal-footer justify-content-center bg-light">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger px-4">Ya, Hapus</button>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}

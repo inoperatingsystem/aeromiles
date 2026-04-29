@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Kelola Member</h3>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahMemberModal">+ Tambah Member Baru</button>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-4">
+        <input type="text" class="form-control" placeholder="Cari nama, email, atau nomor member...">
+    </div>
+    <div class="col-md-2">
+        <select class="form-select">
+            <option selected>Semua Tier</option>
+            <option>Blue</option>
+            <option>Silver</option>
+            <option>Gold</option>
+            <option>Platinum</option>
+        </select>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>No. Member</th>
+                    <th>Nama Lengkap</th>
+                    <th>Email</th>
+                    <th>Tier</th>
+                    <th>Total Miles</th>
+                    <th>Award Miles</th>
+                    <th>Bergabung</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in members %}
+                <tr>
+                    <td class="align-middle fw-bold">{{ m.no }}</td>
+                    <td class="align-middle">{{ m.nama }}</td>
+                    <td class="align-middle">{{ m.email }}</td>
+                    <td class="align-middle"><span class="badge bg-warning text-dark">{{ m.tier }}</span></td>
+                    <td class="align-middle">{{ m.total_miles }}</td>
+                    <td class="align-middle text-success fw-bold">{{ m.award_miles }}</td>
+                    <td class="align-middle">{{ m.bergabung }}</td>
+                    <td class="align-middle">
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editMemberModal">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#hapusMemberModal">Hapus</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="tambahMemberModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold">Tambah Member Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Email *</label>
+                    <input type="email" class="form-control" placeholder="email@example.com" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Password *</label>
+                    <input type="password" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Salutation *</label>
+                    <select class="form-select">
+                        <option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nama Depan *</label>
+                    <input type="text" class="form-control" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Nama Tengah</label>
+                    <input type="text" class="form-control">
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nama Belakang *</label>
+                    <input type="text" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Kewarganegaraan *</label>
+                    <select class="form-select">
+                        <option>Indonesia</option><option>Malaysia</option><option>Singapura</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label class="form-label">Country Code *</label>
+                    <input type="text" class="form-control" value="+62" required>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Nomor HP *</label>
+                    <input type="text" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Tanggal Lahir *</label>
+                    <input type="date" class="form-control" required>
+                </div>
+            </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-primary">Simpan Member</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">Edit Member</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+              <div class="alert alert-info py-2 mb-3">
+                  <small>Email: <strong>john@example.com</strong> | No. Member: <strong>M0001</strong></small>
+              </div>
+
+              <div class="row mb-3">
+                  <div class="col-md-3">
+                      <label class="form-label">Salutation</label>
+                      <select class="form-select"><option selected>Mr.</option><option>Mrs.</option></select>
+                  </div>
+                  <div class="col-md-4">
+                      <label class="form-label">Nama Depan</label>
+                      <input type="text" class="form-control" value="John">
+                  </div>
+                  <div class="col-md-5">
+                      <label class="form-label">Nama Tengah</label>
+                      <input type="text" class="form-control" value="William">
+                  </div>
+              </div>
+  
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label">Nama Belakang</label>
+                      <input type="text" class="form-control" value="Doe">
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label">Kewarganegaraan</label>
+                      <select class="form-select"><option selected>Indonesia</option></select>
+                  </div>
+              </div>
+  
+              <div class="row mb-3">
+                  <div class="col-md-3">
+                      <label class="form-label">Country Code</label>
+                      <input type="text" class="form-control" value="+62">
+                  </div>
+                  <div class="col-md-5">
+                      <label class="form-label">Nomor HP</label>
+                      <input type="text" class="form-control" value="81234567890">
+                  </div>
+                  <div class="col-md-4">
+                      <label class="form-label">Tanggal Lahir</label>
+                      <input type="date" class="form-control" value="1990-05-15">
+                  </div>
+              </div>
+
+              <div class="row mb-3">
+                  <div class="col-md-4">
+                      <label class="form-label fw-bold text-primary">Tier Member</label>
+                      <select class="form-select border-primary">
+                          <option>Blue</option>
+                          <option>Silver</option>
+                          <option selected>Gold</option>
+                          <option>Platinum</option>
+                      </select>
+                  </div>
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary">Simpan Perubahan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div class="modal fade" id="hapusMemberModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-danger">
+        <div class="modal-body text-center pt-4 pb-3">
+          <h4 class="text-danger mb-3">Hapus Member?</h4>
+          <p class="text-muted">Semua data terkait (Identitas, Klaim, Transfer, Redeem) milik member ini akan ikut terhapus. Tindakan ini <strong>tidak dapat dibatalkan</strong>.</p>
+        </div>
+        <div class="modal-footer justify-content-center bg-light">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger px-4">Ya, Hapus Permanen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

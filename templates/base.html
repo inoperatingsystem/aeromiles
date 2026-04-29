@@ -27,7 +27,7 @@
         
         {% elif role == 'member' %}
             <li class="nav-item"><a class="nav-link" href="{% url 'main:dashboard' %}?role=member">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Identitas Saya</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'main:identity_list' %}">Identitas Saya</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Klaim Miles</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Transfer Miles</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Redeem Hadiah</a></li>
@@ -37,7 +37,7 @@
         
         {% elif role == 'staf' %}
             <li class="nav-item"><a class="nav-link" href="{% url 'main:dashboard' %}?role=staf">Dashboard</a></li>
-            <li class="nav-item"><a class="nav-link" href="#">Kelola Member</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'main:member_list' %}">Kelola Member</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Kelola Klaim</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Kelola Hadiah</a></li>
             <li class="nav-item"><a class="nav-link" href="#">Kelola Mitra</a></li>
