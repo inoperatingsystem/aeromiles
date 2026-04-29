@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm mt-5">
+            <div class="card-body p-4">
+                <h3 class="text-center mb-4">Login AeroMiles</h3>
+                <form action="{% url 'main:dashboard' %}" method="GET">
+                    <div class="mb-3">
+                        <label>Email</label>
+                        <input type="email" class="form-control" value="john@example.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Password</label>
+                        <input type="password" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Login Sebagai (Simulasi UI):</label>
+                        <select name="role" class="form-select">
+                            <option value="member">Member</option>
+                            <option value="staf">Staf</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Log In</button>
+                </form>
+                <div class="mt-3 text-center">
+                    <a href="{% url 'main:register' %}">Belum punya akun? Daftar di sini</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

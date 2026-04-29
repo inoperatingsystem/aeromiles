@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h4>Pengaturan Profil</h4><hr>
+                
+                <div class="row mb-3 bg-light p-2 rounded">
+                    <div class="col-md-6"><small class="text-muted">Email (Read-only)</small><br><strong>{{ email }}</strong></div>
+                    {% if role == 'member' %}
+                        <div class="col-md-3"><small class="text-muted">No Member</small><br><strong>{{ nomor_member }}</strong></div>
+                        <div class="col-md-3"><small class="text-muted">Tanggal Gabung</small><br><strong>{{ tanggal_bergabung }}</strong></div>
+                    {% else %}
+                        <div class="col-md-6"><small class="text-muted">ID Staf</small><br><strong>{{ id_staf }}</strong></div>
+                    {% endif %}
+                </div>
+
+                <form action="#" method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label>Salutation</label>
+                            <select class="form-select"><option selected>{{ salutation }}</option><option>Mrs.</option></select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><label>Nama Depan</label><input type="text" class="form-control" value="{{ nama_depan }}"></div>
+                        <div class="col-md-4"><label>Nama Tengah</label><input type="text" class="form-control" value="{{ nama_tengah }}"></div>
+                        <div class="col-md-4"><label>Nama Belakang</label><input type="text" class="form-control" value="{{ nama_belakang }}"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6"><label>Kewarganegaraan</label><input type="text" class="form-control" value="{{ kewarganegaraan }}"></div>
+                        <div class="col-md-6"><label>Tanggal Lahir</label><input type="date" class="form-control" value="{{ tanggal_lahir }}"></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><label>Country Code</label><input type="text" class="form-control" value="{{ country_code }}"></div>
+                        <div class="col-md-8"><label>Nomor HP</label><input type="text" class="form-control" value="{{ nomor_hp }}"></div>
+                    </div>
+                    
+                    {% if role == 'staf' %}
+                    <div class="row mb-3">
+                        <div class="col-md-6"><label>Kode Maskapai</label><input type="text" class="form-control" value="{{ maskapai }}"></div>
+                    </div>
+                    {% endif %}
+                    
+                    <button type="button" class="btn btn-primary mt-2">Simpan Perubahan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5>Ubah Password</h5><hr>
+                <form>
+                    <div class="mb-3"><label>Password Lama</label><input type="password" class="form-control"></div>
+                    <div class="mb-3"><label>Password Baru</label><input type="password" class="form-control"></div>
+                    <div class="mb-3"><label>Konfirmasi Password</label><input type="password" class="form-control"></div>
+                    <button type="button" class="btn btn-secondary w-100">Ubah Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

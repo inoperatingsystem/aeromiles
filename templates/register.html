@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-body p-4">
+        <h4>Daftar Akun Baru</h4>
+        <hr>
+        <form action="{% url 'main:login' %}" method="GET">
+            <div class="mb-3">
+                <label>Pilih Peran:</label>
+                <select class="form-select w-25" id="roleSelect" onchange="toggleMaskapai()">
+                    <option value="member">Member</option>
+                    <option value="staf">Staf</option>
+                </select>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Email *</label><input type="email" class="form-control" required>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Password *</label><input type="password" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label>Konfirmasi Password *</label><input type="password" class="form-control" required>
+                </div>
+            </div>
+
+            <h5 class="mt-4">Data Pribadi</h5>
+            <div class="row mb-3">
+                <div class="col-md-2">
+                    <label>Salutation *</label>
+                    <select class="form-select"><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select>
+                </div>
+                <div class="col-md-5">
+                    <label>Nama Depan *</label><input type="text" class="form-control" required>
+                </div>
+                <div class="col-md-5">
+                    <label>Nama Belakang *</label><input type="text" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label>Kewarganegaraan *</label>
+                    <select class="form-select"><option>Indonesia</option><option>Malaysia</option></select>
+                </div>
+                <div class="col-md-6">
+                    <label>Tanggal Lahir *</label><input type="date" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label>Country Code *</label><input type="text" class="form-control" value="+62" required>
+                </div>
+                <div class="col-md-9">
+                    <label>Nomor HP *</label><input type="text" class="form-control" required>
+                </div>
+            </div>
+
+            <div id="stafField" style="display: none;" class="mb-4">
+                <h5>Data Staf</h5>
+                <label>Kode Maskapai *</label>
+                <select class="form-select w-50">
+                    <option>GA - Garuda Indonesia</option>
+                    <option>SQ - Singapore Airlines</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Daftar</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function toggleMaskapai() {
+        var role = document.getElementById("roleSelect").value;
+        document.getElementById("stafField").style.display = (role === "staf") ? "block" : "none";
+    }
+</script>
+{% endblock %}
