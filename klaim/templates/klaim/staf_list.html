@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Kelola Klaim Missing Miles — AeroMiles{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-semibold mb-0">Kelola Klaim Missing Miles</h4>
+</div>
+
+<!-- Filter Box -->
+<form method="get" class="row g-2 mb-3 align-items-end">
+  <div class="col-md-2">
+    <label class="form-label" style="font-size:.85rem;">Status</label>
+    <select name="status" class="form-select form-select-sm">
+      <option value="">Semua Status</option>
+      <option value="Menunggu"  {% if filter_status == 'Menunggu' %}selected{% endif %}>Menunggu</option>
+      <option value="Disetujui" {% if filter_status == 'Disetujui' %}selected{% endif %}>Disetujui</option>
+      <option value="Ditolak"   {% if filter_status == 'Ditolak' %}selected{% endif %}>Ditolak</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label" style="font-size:.85rem;">Maskapai</label>
+    <select name="maskapai" class="form-select form-select-sm">
+      <option value="">Semua Maskapai</option>
+      {% for code, label in maskapai_list %}
+        <option value="{{ code }}" {% if filter_maskapai == code %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label" style="font-size:.85rem;">Tanggal Pengajuan</label>
+    <input type="date" name="tanggal" class="form-control form-control-sm" value="{{ filter_tanggal }}">
+  </div>
+  <div class="col-md-auto">
+    <button type="submit" class="btn btn-outline-secondary btn-sm px-3">Filter</button>
+    <a href="{% url 'klaim:staf_list' %}" class="btn btn-link btn-sm text-muted">Reset</a>
+  </div>
+</form>
+
+<!-- Tabel -->
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>No. Klaim</th><th>Member</th><th>Maskapai</th><th>Rute</th>
+          <th>Tanggal</th><th>Flight</th><th>Kelas</th><th>Tanggal Pengajuan</th><th>Status</th><th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in klaim_list %}
+        <tr>
+          <td class="fw-bold"><code>{{ c.no_klaim }}</code></td>
+          <td>
+            {{ c.nama_member|default:"John W. Doe" }}<br>
+            <small class="text-muted">{{ c.email_member|default:"john@example.com" }}</small>
+          </td>
+          <td>{{ c.maskapai }}</td>
+          <td>{{ c.get_rute }}</td>
+          <td>{{ c.tanggal_penerbangan }}</td>
+          <td>{{ c.flight_number }}</td>
+          <td>{{ c.kelas_kabin }}</td>
+          <td><small class="text-muted">{{ c.tanggal_pengajuan|date:"Y-m-d H:i" }}</small></td>
+          <td>
+            {% if c.status == 'Disetujui' %}<span class="badge bg-success">Disetujui</span>
+            {% elif c.status == 'Ditolak' %}<span class="badge bg-danger">Ditolak</span>
+            {% else %}<span class="badge bg-warning text-dark">Menunggu</span>{% endif %}
+          </td>
+          <td>
+            {% if c.status == 'Menunggu' %}
+              <button class="btn btn-sm btn-outline-success me-1 px-2 py-0"
+                      data-bs-toggle="modal" data-bs-target="#setujuKlaimModal"
+                      data-no="{{ c.no_klaim }}"
+                      data-member="{{ c.nama_member|default:'John W. Doe' }}"
+                      data-rute="{{ c.get_rute }}"
+                      data-kelas="{{ c.kelas_kabin }}"
+                      data-url="{% url 'klaim:staf_action' c.no_klaim %}">✓</button>
+              <button class="btn btn-sm btn-outline-danger px-2 py-0"
+                      data-bs-toggle="modal" data-bs-target="#tolakKlaimModal"
+                      data-no="{{ c.no_klaim }}"
+                      data-member="{{ c.nama_member|default:'John W. Doe' }}"
+                      data-rute="{{ c.get_rute }}"
+                      data-kelas="{{ c.kelas_kabin }}"
+                      data-url="{% url 'klaim:staf_action' c.no_klaim %}">✗</button>
+            {% else %}
+              <span class="text-muted"><small><i>Selesai</i></small></span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="10" class="text-center text-muted py-4">Belum ada klaim.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Setujui -->
+<div class="modal fade" id="setujuKlaimModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-success">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold text-success">Setujui Klaim</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pb-2">
+        <p class="text-muted">Miles akan otomatis ditambahkan ke akun member sesuai rute dan kelas kabin.</p>
+        <ul class="list-unstyled bg-light p-3 rounded" style="font-size:.9rem;">
+          <li><strong>Klaim:</strong> <span id="sNo"></span></li>
+          <li><strong>Member:</strong> <span id="sMember"></span></li>
+          <li><strong>Rute:</strong> <span id="sRute"></span></li>
+          <li><strong>Kelas:</strong> <span id="sKelas"></span></li>
+        </ul>
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Batal</button>
+        <form id="formSetuju" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="setujui">
+          <button type="submit" class="btn btn-success btn-sm px-4">Ya, Setujui</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tolak -->
+<div class="modal fade" id="tolakKlaimModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold text-danger">Tolak Klaim</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pb-2">
+        <p class="text-muted">Klaim ini akan ditolak dan member akan diinformasikan.</p>
+        <ul class="list-unstyled bg-light p-3 rounded" style="font-size:.9rem;">
+          <li><strong>Klaim:</strong> <span id="tNo"></span></li>
+          <li><strong>Member:</strong> <span id="tMember"></span></li>
+          <li><strong>Rute:</strong> <span id="tRute"></span></li>
+          <li><strong>Kelas:</strong> <span id="tKelas"></span></li>
+        </ul>
+      </div>
+      <div class="modal-footer bg-light border-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Batal</button>
+        <form id="formTolak" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="tolak">
+          <button type="submit" class="btn btn-danger btn-sm px-4">Ya, Tolak</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Setuju
+  document.getElementById('setujuKlaimModal').addEventListener('show.bs.modal', e => {
+    const b = e.relatedTarget;
+    document.getElementById('sNo').textContent = b.dataset.no;
+    document.getElementById('sMember').textContent = b.dataset.member;
+    document.getElementById('sRute').textContent = b.dataset.rute;
+    document.getElementById('sKelas').textContent = b.dataset.kelas;
+    document.getElementById('formSetuju').action = b.dataset.url;
+  });
+  // Tolak
+  document.getElementById('tolakKlaimModal').addEventListener('show.bs.modal', e => {
+    const b = e.relatedTarget;
+    document.getElementById('tNo').textContent = b.dataset.no;
+    document.getElementById('tMember').textContent = b.dataset.member;
+    document.getElementById('tRute').textContent = b.dataset.rute;
+    document.getElementById('tKelas').textContent = b.dataset.kelas;
+    document.getElementById('formTolak').action = b.dataset.url;
+  });
+</script>
+{% endblock %}

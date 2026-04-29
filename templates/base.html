@@ -34,24 +34,51 @@
 </head>
 <body>
 
-{% if request.path != '/login/' and request.path != '/register/' %}
+{% if request.user.is_authenticated %}
 <nav class="navbar navbar-expand-lg navbar-custom">
   <div class="container-fluid">
-    <a class="navbar-brand" href="/dashboard/?role=staf">✈️ AeroMiles</a>
+    <a class="navbar-brand" href="{% url 'main:dashboard' %}">✈️ AeroMiles</a>
     <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
+      {% if request.user.userprofile.role == 'member' %}
+      <!-- ── Navbar Member ── -->
+      <ul class="navbar-nav me-auto gap-1">
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="{% url 'main:dashboard' %}">Dashboard</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/identities/' %}active{% endif %}" href="{% url 'main:identity_list' %}">Identitas Saya</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/klaim/' in request.path %}active{% endif %}"
+             href="{% url 'klaim:member_list' %}">Klaim Miles</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/transfer/' in request.path %}active{% endif %}"
+             href="{% url 'transfer:transfer_list' %}">Transfer Miles</a>
+        </li>
+        <li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">Redeem Hadiah</a></li>
+        <li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">Beli Package</a></li>
+        <li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">Info Tier</a></li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/profile/' %}active{% endif %}" href="{% url 'main:profile' %}">Pengaturan Profil</a>
+        </li>
+      </ul>
+      {% else %}
+      <!-- ── Navbar Staf ── -->
       <ul class="navbar-nav me-auto gap-1">
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}"
-             href="/dashboard/?role=staf">Dashboard</a>
+             href="{% url 'main:dashboard' %}">Dashboard</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link disabled" href="#" tabindex="-1">Kelola Member</a>
+          <a class="nav-link {% if request.path == '/members/' %}active{% endif %}" href="{% url 'main:member_list' %}">Kelola Member</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link disabled" href="#" tabindex="-1">Kelola Klaim</a>
+          <a class="nav-link {% if '/klaim/' in request.path %}active{% endif %}"
+             href="{% url 'klaim:staf_list' %}">Kelola Klaim</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if '/hadiah/' in request.path %}active{% endif %}"
@@ -66,15 +93,20 @@
         </li>
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/profile/' %}active{% endif %}"
-             href="/profile/?role=staf">Pengaturan Profil</a>
+             href="{% url 'main:profile' %}">Pengaturan Profil</a>
         </li>
       </ul>
+      {% endif %}
       <a class="btn btn-danger btn-sm ms-2" href="{% url 'main:logout' %}">Logout</a>
     </div>
   </div>
 </nav>
 <div class="navbar-subinfo">
-  Masuk sebagai: <strong>{{ nama_lengkap|default:"Admin Aero" }}</strong> — Staf
+  {% if request.user.userprofile.role == 'member' %}
+  Masuk sebagai: <strong>{{ request.user.userprofile.full_name }}</strong> — Member
+  {% else %}
+  Masuk sebagai: <strong>{{ request.user.userprofile.full_name }}</strong> — Staf
+  {% endif %}
 </div>
 {% endif %}
 

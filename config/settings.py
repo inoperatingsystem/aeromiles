@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'main',
     'hadiah',
     'mitra',
+    'klaim',
+    'transfer',
 ]
 
 MIDDLEWARE = [

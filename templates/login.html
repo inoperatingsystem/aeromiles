@@ -1,30 +1,38 @@
 {% extends 'base.html' %}
+{% block title %}Login — AeroMiles{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card shadow-sm mt-5">
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5 text-center">
+        <div class="mb-4">
+            <h2 class="fw-bold">Selamat Datang</h2>
+            <p class="text-muted">Masuk ke akun AeroMiles Anda</p>
+        </div>
+
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ msg.tags }} alert-dismissible fade show text-start">
+                    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="card shadow-sm border-0 text-start">
             <div class="card-body p-4">
-                <h3 class="text-center mb-4">Login AeroMiles</h3>
-                <form action="{% url 'main:dashboard' %}" method="GET">
+                <form method="post">
+                    {% csrf_token %}
                     <div class="mb-3">
-                        <label>Email</label>
-                        <input type="email" class="form-control" value="john@example.com" required>
+                        <label class="form-label fw-medium">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="email@example.com" required>
                     </div>
-                    <div class="mb-3">
-                        <label>Password</label>
-                        <input type="password" class="form-control" required>
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Password</label>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
                     </div>
-                    <div class="mb-3">
-                        <label>Login Sebagai (Simulasi UI):</label>
-                        <select name="role" class="form-select">
-                            <option value="member">Member</option>
-                            <option value="staf">Staf</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Log In</button>
+                    <button type="submit" class="btn btn-primary w-100 fw-medium">Log In</button>
                 </form>
-                <div class="mt-3 text-center">
-                    <a href="{% url 'main:register' %}">Belum punya akun? Daftar di sini</a>
+                <div class="text-center mt-4 text-muted" style="font-size: .9rem;">
+                    Belum punya akun? <a href="{% url 'main:register' %}" class="text-decoration-none fw-medium">Daftar di sini</a>
                 </div>
             </div>
         </div>

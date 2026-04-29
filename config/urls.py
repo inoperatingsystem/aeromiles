@@ -22,4 +22,6 @@ urlpatterns = [
     path('', include('main.urls')),
     path('hadiah/', include('hadiah.urls', namespace='hadiah')),
     path('mitra/', include('mitra.urls', namespace='mitra')),
+    path('klaim/', include('klaim.urls', namespace='klaim')),
+    path('transfer/', include('transfer.urls', namespace='transfer')),
 ]

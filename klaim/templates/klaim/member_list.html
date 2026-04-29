@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% block title %}Klaim Missing Miles — AeroMiles{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+  .filter-btn.active { background:#0b2046; color:#fff; border-color:#0b2046; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-semibold mb-0">Klaim Missing Miles</h4>
+  <button class="btn btn-primary btn-sm shadow-sm"
+          data-bs-toggle="modal" data-bs-target="#tambahKlaimModal">+ Ajukan Klaim</button>
+</div>
+
+<!-- Filter Status -->
+<div class="mb-3 d-flex gap-2">
+  <a href="{% url 'klaim:member_list' %}"
+     class="btn btn-sm {% if not filter_status %}btn-dark{% else %}btn-outline-secondary{% endif %}">Semua</a>
+  <a href="?status=Menunggu"
+     class="btn btn-sm {% if filter_status == 'Menunggu' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}">Menunggu</a>
+  <a href="?status=Disetujui"
+     class="btn btn-sm {% if filter_status == 'Disetujui' %}btn-success{% else %}btn-outline-success{% endif %}">Disetujui</a>
+  <a href="?status=Ditolak"
+     class="btn btn-sm {% if filter_status == 'Ditolak' %}btn-danger{% else %}btn-outline-danger{% endif %}">Ditolak</a>
+</div>
+
+<!-- Tabel -->
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>No. Klaim</th><th>Maskapai</th><th>Rute</th><th>Tanggal</th>
+          <th>Flight</th><th>Kelas</th><th>Status</th><th>Tanggal Pengajuan</th><th>Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in klaim_list %}
+        <tr>
+          <td class="fw-bold"><code>{{ c.no_klaim }}</code></td>
+          <td>{{ c.maskapai }}</td>
+          <td>{{ c.get_rute }}</td>
+          <td>{{ c.tanggal_penerbangan }}</td>
+          <td>{{ c.flight_number }}</td>
+          <td>{{ c.kelas_kabin }}</td>
+          <td>
+            {% if c.status == 'Disetujui' %}<span class="badge bg-success">Disetujui</span>
+            {% elif c.status == 'Ditolak' %}<span class="badge bg-danger">Ditolak</span>
+            {% else %}<span class="badge bg-warning text-dark">Menunggu</span>{% endif %}
+          </td>
+          <td><small class="text-muted">{{ c.tanggal_pengajuan|date:"Y-m-d H:i" }}</small></td>
+          <td>
+            {% if c.status == 'Menunggu' %}
+              <button class="btn btn-sm btn-outline-secondary me-1"
+                      data-bs-toggle="modal" data-bs-target="#editKlaimModal"
+                      data-no="{{ c.no_klaim }}"
+                      data-maskapai="{{ c.maskapai }}"
+                      data-asal="{{ c.bandara_asal }}"
+                      data-tujuan="{{ c.bandara_tujuan }}"
+                      data-tanggal="{{ c.tanggal_penerbangan|date:'Y-m-d' }}"
+                      data-flight="{{ c.flight_number }}"
+                      data-kelas="{{ c.kelas_kabin }}"
+                      data-tiket="{{ c.nomor_tiket }}"
+                      data-pnr="{{ c.pnr }}"
+                      data-url="{% url 'klaim:member_update' c.no_klaim %}">✏️</button>
+              <button class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal" data-bs-target="#batalKlaimModal"
+                      data-no="{{ c.no_klaim }}"
+                      data-url="{% url 'klaim:member_delete' c.no_klaim %}">🗑️</button>
+            {% else %}
+              <span class="text-muted"><small><i>Terkunci</i></small></span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="text-center text-muted py-4">Belum ada klaim.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Modal Ajukan Klaim Baru ────────────────────────────────────────── -->
+<div class="modal fade" id="tambahKlaimModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Ajukan Klaim Baru</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'klaim:member_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Maskapai <span class="text-danger">*</span></label>
+              <select name="maskapai" class="form-select form-select-sm" required>
+                <option value="">Pilih maskapai…</option>
+                {% for code, label in maskapai_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Kelas Kabin <span class="text-danger">*</span></label>
+              <select name="kelas_kabin" class="form-select form-select-sm" required>
+                <option value="">Pilih kelas…</option>
+                {% for code, label in kelas_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Bandara Asal <span class="text-danger">*</span></label>
+              <select name="bandara_asal" class="form-select form-select-sm" required>
+                <option value="">Pilih bandara…</option>
+                {% for code, label in bandara_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Bandara Tujuan <span class="text-danger">*</span></label>
+              <select name="bandara_tujuan" class="form-select form-select-sm" required>
+                <option value="">Pilih bandara…</option>
+                {% for code, label in bandara_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Tanggal Penerbangan <span class="text-danger">*</span></label>
+              <input type="date" name="tanggal_penerbangan" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Flight Number <span class="text-danger">*</span></label>
+              <input type="text" name="flight_number" class="form-control form-control-sm" placeholder="cth. GA404" required>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Nomor Tiket <span class="text-danger">*</span></label>
+              <input type="text" name="nomor_tiket" class="form-control form-control-sm" placeholder="cth. 0011223345" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">PNR (Booking Code) <span class="text-danger">*</span></label>
+              <input type="text" name="pnr" class="form-control form-control-sm" placeholder="cth. PS2DKC" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm px-4">Ajukan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Edit Klaim ───────────────────────────────────────────────── -->
+<div class="modal fade" id="editKlaimModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">Edit Klaim (<span id="editNoLabel"></span>)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formEditKlaim" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Maskapai</label>
+              <select name="maskapai" id="eMaskapai" class="form-select form-select-sm">
+                {% for code, label in maskapai_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Kelas Kabin</label>
+              <select name="kelas_kabin" id="eKelas" class="form-select form-select-sm">
+                {% for code, label in kelas_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Bandara Asal</label>
+              <select name="bandara_asal" id="eAsal" class="form-select form-select-sm">
+                {% for code, label in bandara_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Bandara Tujuan</label>
+              <select name="bandara_tujuan" id="eTujuan" class="form-select form-select-sm">
+                {% for code, label in bandara_list %}
+                  <option value="{{ code }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Tanggal Penerbangan</label>
+              <input type="date" name="tanggal_penerbangan" id="eTanggal" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Flight Number</label>
+              <input type="text" name="flight_number" id="eFlight" class="form-control form-control-sm">
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">Nomor Tiket</label>
+              <input type="text" name="nomor_tiket" id="eTiket" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium" style="font-size:.85rem;">PNR</label>
+              <input type="text" name="pnr" id="ePnr" class="form-control form-control-sm">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm px-4">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Batalkan Klaim ───────────────────────────────────────────── -->
+<div class="modal fade" id="batalKlaimModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-body text-center pt-4 pb-2">
+        <h5 class="text-danger fw-bold mb-2">Batalkan Klaim?</h5>
+        <p class="text-muted mb-0">Klaim <strong id="batalNo"></strong> akan dihapus secara permanen dan tindakan ini tidak dapat dibatalkan.</p>
+      </div>
+      <div class="modal-footer justify-content-center border-0 pb-4">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Batal</button>
+        <form id="formBatalKlaim" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm px-4">Ya, Hapus</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Edit modal
+  document.getElementById('editKlaimModal').addEventListener('show.bs.modal', e => {
+    const b = e.relatedTarget;
+    document.getElementById('editNoLabel').textContent = b.dataset.no;
+    document.getElementById('eMaskapai').value  = b.dataset.maskapai;
+    document.getElementById('eKelas').value     = b.dataset.kelas;
+    document.getElementById('eAsal').value      = b.dataset.asal;
+    document.getElementById('eTujuan').value    = b.dataset.tujuan;
+    document.getElementById('eTanggal').value   = b.dataset.tanggal;
+    document.getElementById('eFlight').value    = b.dataset.flight;
+    document.getElementById('eTiket').value     = b.dataset.tiket;
+    document.getElementById('ePnr').value       = b.dataset.pnr;
+    document.getElementById('formEditKlaim').action = b.dataset.url;
+  });
+  // Batal modal
+  document.getElementById('batalKlaimModal').addEventListener('show.bs.modal', e => {
+    const b = e.relatedTarget;
+    document.getElementById('batalNo').textContent = b.dataset.no;
+    document.getElementById('formBatalKlaim').action = b.dataset.url;
+  });
+</script>
+{% endblock %}

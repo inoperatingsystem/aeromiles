@@ -1,83 +1,140 @@
 {% extends 'base.html' %}
+{% block title %}Registrasi — AeroMiles{% endblock %}
+
 {% block content %}
-<div class="card shadow-sm">
-    <div class="card-body p-4">
-        <h4>Daftar Akun Baru</h4>
-        <hr>
-        <form action="{% url 'main:login' %}" method="GET">
-            <div class="mb-3">
-                <label>Pilih Peran:</label>
-                <select class="form-select w-25" id="roleSelect" onchange="toggleMaskapai()">
-                    <option value="member">Member</option>
-                    <option value="staf">Staf</option>
-                </select>
-            </div>
-            
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label>Email *</label><input type="email" class="form-control" required>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label>Password *</label><input type="password" class="form-control" required>
-                </div>
-                <div class="col-md-6">
-                    <label>Konfirmasi Password *</label><input type="password" class="form-control" required>
-                </div>
-            </div>
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-7 text-center">
+        <div class="mb-4">
+            <h2 class="fw-bold">Daftar Akun Baru</h2>
+            <p class="text-muted">Bergabung dengan program AeroMiles</p>
+        </div>
 
-            <h5 class="mt-4">Data Pribadi</h5>
-            <div class="row mb-3">
-                <div class="col-md-2">
-                    <label>Salutation *</label>
-                    <select class="form-select"><option>Mr.</option><option>Mrs.</option><option>Ms.</option><option>Dr.</option></select>
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ msg.tags }} alert-dismissible fade show text-start">
+                    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-                <div class="col-md-5">
-                    <label>Nama Depan *</label><input type="text" class="form-control" required>
-                </div>
-                <div class="col-md-5">
-                    <label>Nama Belakang *</label><input type="text" class="form-control" required>
-                </div>
-            </div>
-            
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label>Kewarganegaraan *</label>
-                    <select class="form-select"><option>Indonesia</option><option>Malaysia</option></select>
-                </div>
-                <div class="col-md-6">
-                    <label>Tanggal Lahir *</label><input type="date" class="form-control" required>
-                </div>
-            </div>
+            {% endfor %}
+        {% endif %}
 
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label>Country Code *</label><input type="text" class="form-control" value="+62" required>
-                </div>
-                <div class="col-md-9">
-                    <label>Nomor HP *</label><input type="text" class="form-control" required>
+        <div class="card shadow-sm border-0 text-start">
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    <h6 class="fw-bold mb-3">Registrasi</h6>
+                    <p class="text-muted small mb-3">Pilih peran dan lengkapi data Anda</p>
+                    
+                    <div class="d-flex mb-4 gap-2">
+                        <input type="radio" class="btn-check" name="role" id="roleMember" value="member" checked>
+                        <label class="btn btn-outline-primary flex-fill" for="roleMember">Member</label>
+
+                        <input type="radio" class="btn-check" name="role" id="roleStaf" value="staf">
+                        <label class="btn btn-outline-primary flex-fill" for="roleStaf">Staf</label>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-medium small">Email <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Password <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Konfirmasi Password <span class="text-danger">*</span></label>
+                            <input type="password" name="confirm_password" class="form-control form-control-sm" required>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mt-4 mb-3">Data Pribadi</h6>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-medium small">Salutation <span class="text-danger">*</span></label>
+                            <select name="salutation" class="form-select form-select-sm" required>
+                                <option value="Mr.">Mr.</option>
+                                <option value="Mrs.">Mrs.</option>
+                                <option value="Ms.">Ms.</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8"></div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Nama Depan-Tengah <span class="text-danger">*</span></label>
+                            <input type="text" name="first_mid_name" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Nama Belakang <span class="text-danger">*</span></label>
+                            <input type="text" name="last_name" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Country Code <span class="text-danger">*</span></label>
+                            <select name="country_code" class="form-select form-select-sm" required>
+                                <option value="+62">+62 (Indonesia)</option>
+                                <option value="+60">+60 (Malaysia)</option>
+                                <option value="+65">+65 (Singapore)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Nomor HP <span class="text-danger">*</span></label>
+                            <input type="text" name="phone_number" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Tanggal Lahir <span class="text-danger">*</span></label>
+                            <input type="date" name="dob" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium small">Kewarganegaraan <span class="text-danger">*</span></label>
+                            <select name="nationality" class="form-select form-select-sm" required>
+                                <option value="Indonesia">Indonesia</option>
+                                <option value="Malaysia">Malaysia</option>
+                                <option value="Singapore">Singapore</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="stafFields" style="display: none;">
+                        <h6 class="fw-bold mt-4 mb-3">Data Staf</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-medium small">Kode Maskapai <span class="text-danger">*</span></label>
+                                <select name="kode_maskapai" class="form-select form-select-sm">
+                                    <option value="">Pilih Maskapai</option>
+                                    <option value="GA">GA - Garuda Indonesia</option>
+                                    <option value="SQ">SQ - Singapore Airlines</option>
+                                    <option value="MH">MH - Malaysia Airlines</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-medium mt-4">Daftar</button>
+                </form>
+                <div class="text-center mt-3 text-muted small">
+                    Sudah punya akun? <a href="{% url 'main:login' %}" class="text-decoration-none fw-medium">Log In</a>
                 </div>
             </div>
-
-            <div id="stafField" style="display: none;" class="mb-4">
-                <h5>Data Staf</h5>
-                <label>Kode Maskapai *</label>
-                <select class="form-select w-50">
-                    <option>GA - Garuda Indonesia</option>
-                    <option>SQ - Singapore Airlines</option>
-                </select>
-            </div>
-
-            <button type="submit" class="btn btn-primary w-100">Daftar</button>
-        </form>
+        </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
 <script>
-    function toggleMaskapai() {
-        var role = document.getElementById("roleSelect").value;
-        document.getElementById("stafField").style.display = (role === "staf") ? "block" : "none";
-    }
+    const roleRadios = document.querySelectorAll('input[name="role"]');
+    const stafFields = document.getElementById('stafFields');
+    const maskapaiInput = document.querySelector('select[name="kode_maskapai"]');
+
+    roleRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if(e.target.value === 'staf') {
+                stafFields.style.display = 'block';
+                maskapaiInput.required = true;
+            } else {
+                stafFields.style.display = 'none';
+                maskapaiInput.required = false;
+            }
+        });
+    });
 </script>
 {% endblock %}
