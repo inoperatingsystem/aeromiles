@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Kelola Klaim Missing Miles</h3>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-2"><select class="form-select"><option>Semua Status</option></select></div>
+    <div class="col-md-3"><select class="form-select"><option>Semua Maskapai</option></select></div>
+    <div class="col-md-3"><input type="date" class="form-control" placeholder="Tanggal Pengajuan"></div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>No. Klaim</th>
+                    <th>Member</th>
+                    <th>Maskapai</th>
+                    <th>Rute</th>
+                    <th>Tanggal</th>
+                    <th>Flight</th>
+                    <th>Kelas</th>
+                    <th>Tanggal Pengajuan</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in claims %}
+                <tr>
+                    <td class="align-middle fw-bold">{{ c.no }}</td>
+                    <td class="align-middle">{{ c.nama_member }}<br><small class="text-muted">{{ c.email }}</small></td>
+                    <td class="align-middle">{{ c.maskapai }}</td>
+                    <td class="align-middle">{{ c.rute }}</td>
+                    <td class="align-middle">{{ c.tanggal }}</td>
+                    <td class="align-middle">{{ c.flight }}</td>
+                    <td class="align-middle">{{ c.kelas }}</td>
+                    <td class="align-middle"><small>{{ c.diajukan }}</small></td>
+                    <td class="align-middle">
+                        {% if c.status == 'Disetujui' %}<span class="badge bg-success">Disetujui</span>
+                        {% elif c.status == 'Ditolak' %}<span class="badge bg-danger">Ditolak</span>
+                        {% else %}<span class="badge bg-warning text-dark">Menunggu</span>{% endif %}
+                    </td>
+                    <td class="align-middle">
+                        {% if c.status == 'Menunggu' %}
+                        <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#setujuKlaimModal">Setujui</button>
+                        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#tolakKlaimModal">Tolak</button>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="setujuKlaimModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-success">
+        <div class="modal-header bg-light">
+            <h5 class="modal-title fw-bold text-success">Setujui Klaim</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pb-3">
+          <p class="text-muted">Miles akan otomatis ditambahkan ke akun member sesuai rute dan kelas kabin.</p>
+          <ul class="list-unstyled">
+              <li><strong>Klaim:</strong> CLM-002</li>
+              <li><strong>Member:</strong> John W. Doe</li>
+              <li><strong>Rute:</strong> SIN ➔ NRT</li>
+              <li><strong>Kelas:</strong> Economy</li>
+          </ul>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-success px-4">Ya, Setujui</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="tolakKlaimModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-danger">
+        <div class="modal-header bg-light">
+            <h5 class="modal-title fw-bold text-danger">Tolak Klaim</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body pb-3">
+          <p class="text-muted">Klaim ini akan ditolak dan member akan diinformasikan.</p>
+          <ul class="list-unstyled">
+              <li><strong>Klaim:</strong> CLM-004</li>
+              <li><strong>Member:</strong> Jane Smith</li>
+              <li><strong>Rute:</strong> CGK ➔ SUB</li>
+              <li><strong>Kelas:</strong> Economy</li>
+          </ul>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger px-4">Ya, Tolak</button>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}
