@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}
+  {% if mode == 'create' %}Tambah Mitra{% else %}Edit Mitra{% endif %} — AeroMiles
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-card  { max-width: 560px; margin: 0 auto; }
+  .form-label { font-size: .85rem; font-weight: 500; color: #495057; }
+  .field-ro   { background: #f8f9fa; color: #6c757d; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-card">
+  <nav style="font-size:.85rem;" class="mb-3">
+    <a href="{% url 'mitra:mitra_list' %}" class="text-decoration-none text-muted">Kelola Mitra</a>
+    <span class="mx-1 text-muted">/</span>
+    <span>{% if mode == 'create' %}Tambah Mitra{% else %}Edit Mitra{% endif %}</span>
+  </nav>
+
+  <div class="mb-4">
+    <h5 class="fw-semibold mb-0">
+      {% if mode == 'create' %}Tambah Mitra Baru{% else %}Edit Informasi Mitra{% endif %}
+    </h5>
+    <small class="text-muted">
+      {% if mode == 'update' %}
+        Email mitra dan ID Penyedia tidak dapat diubah.
+      {% else %}
+        ID Penyedia akan di-generate otomatis oleh sistem.
+      {% endif %}
+    </small>
+  </div>
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <!-- Email Mitra -->
+    <div class="mb-3">
+      <label class="form-label">Email Mitra <span class="text-danger">*</span></label>
+      {% if mode == 'update' %}
+        <input type="email" class="form-control field-ro"
+               value="{{ mitra.email_mitra }}" readonly>
+        <div class="form-text">Email mitra tidak dapat diubah (Primary Key).</div>
+      {% else %}
+        <input type="email" name="email_mitra" class="form-control"
+               placeholder="partner@example.com"
+               value="{% if form_data %}{{ form_data.email_mitra }}{% endif %}"
+               required>
+      {% endif %}
+    </div>
+
+    <!-- ID Penyedia (hanya tampil saat edit) -->
+    {% if mode == 'update' %}
+    <div class="mb-3">
+      <label class="form-label">ID Penyedia</label>
+      <input type="text" class="form-control field-ro"
+             value="#{{ mitra.id_penyedia.id }}" readonly>
+      <div class="form-text">ID Penyedia tidak dapat diubah.</div>
+    </div>
+    {% endif %}
+
+    <!-- Nama Mitra -->
+    <div class="mb-3">
+      <label class="form-label">Nama Mitra <span class="text-danger">*</span></label>
+      <input type="text" name="nama_mitra" class="form-control"
+             placeholder="cth. TravelokaPartner"
+             value="{% if form_data %}{{ form_data.nama_mitra }}{% elif mitra %}{{ mitra.nama_mitra }}{% endif %}"
+             required>
+    </div>
+
+    <!-- Tanggal Kerja Sama -->
+    <div class="mb-4">
+      <label class="form-label">Tanggal Kerja Sama <span class="text-danger">*</span></label>
+      <input type="date" name="tanggal_kerja_sama" class="form-control"
+             value="{% if form_data %}{{ form_data.tanggal_kerja_sama }}{% elif mitra %}{{ mitra.tanggal_kerja_sama|date:'Y-m-d' }}{% endif %}"
+             required>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary btn-sm px-4">
+        {% if mode == 'create' %}Daftarkan Mitra{% else %}Simpan Perubahan{% endif %}
+      </button>
+      <a href="{% url 'mitra:mitra_list' %}" class="btn btn-outline-secondary btn-sm px-3">Batal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

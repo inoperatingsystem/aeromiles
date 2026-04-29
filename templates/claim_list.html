@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Klaim Missing Miles</h3>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahKlaimModal">+ Ajukan Klaim Baru</button>
+</div>
+
+<div class="mb-3">
+    <button class="btn btn-dark btn-sm me-2">Semua</button>
+    <button class="btn btn-outline-secondary btn-sm me-2">Menunggu</button>
+    <button class="btn btn-outline-success btn-sm me-2">Disetujui</button>
+    <button class="btn btn-outline-danger btn-sm">Ditolak</button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>No. Klaim</th>
+                    <th>Maskapai</th>
+                    <th>Rute</th>
+                    <th>Tanggal</th>
+                    <th>Flight</th>
+                    <th>Kelas</th>
+                    <th>Status</th>
+                    <th>Tanggal Pengajuan</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in claims %}
+                <tr>
+                    <td class="align-middle fw-bold">{{ c.no }}</td>
+                    <td class="align-middle">{{ c.maskapai }}</td>
+                    <td class="align-middle">{{ c.rute }}</td>
+                    <td class="align-middle">{{ c.tanggal }}</td>
+                    <td class="align-middle">{{ c.flight }}</td>
+                    <td class="align-middle">{{ c.kelas }}</td>
+                    <td class="align-middle">
+                        {% if c.status == 'Disetujui' %}<span class="badge bg-success">Disetujui</span>
+                        {% elif c.status == 'Ditolak' %}<span class="badge bg-danger">Ditolak</span>
+                        {% else %}<span class="badge bg-warning text-dark">Menunggu</span>{% endif %}
+                    </td>
+                    <td class="align-middle"><small>{{ c.diajukan }}</small></td>
+                    <td class="align-middle">
+                        {% if c.status == 'Menunggu' %}
+                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editKlaimModal">Edit</button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#batalKlaimModal">Batal</button>
+                        {% else %}
+                        <span class="text-muted"><small><i>Terkunci</i></small></span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="tambahKlaimModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">Ajukan Klaim Baru</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label">Maskapai *</label>
+                      <select class="form-select" required>
+                          <option>GA - Garuda Indonesia</option><option>SQ - Singapore Airlines</option>
+                      </select>
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label">Kelas Kabin *</label>
+                      <select class="form-select" required>
+                          <option>Economy</option><option>Business</option><option>First</option>
+                      </select>
+                  </div>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6">
+                      <label class="form-label">Bandara Asal *</label>
+                      <select class="form-select" required><option>CGK - Soekarno Hatta</option><option>SIN - Changi</option></select>
+                  </div>
+                  <div class="col-md-6">
+                      <label class="form-label">Bandara Tujuan *</label>
+                      <select class="form-select" required><option>DPS - Ngurah Rai</option><option>NRT - Narita</option></select>
+                  </div>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6"><label class="form-label">Tanggal Penerbangan *</label><input type="date" class="form-control" required></div>
+                  <div class="col-md-6"><label class="form-label">Flight Number *</label><input type="text" class="form-control" placeholder="Contoh: GA404" required></div>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6"><label class="form-label">Nomor Tiket *</label><input type="text" class="form-control" required></div>
+                  <div class="col-md-6"><label class="form-label">PNR (Booking Code) *</label><input type="text" class="form-control" required></div>
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary px-4">Ajukan Klaim</button></div>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editKlaimModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">Edit Klaim (CLM-002)</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+              <div class="row mb-3">
+                  <div class="col-md-6"><label class="form-label">Maskapai</label><select class="form-select"><option selected>SQ - Singapore Airlines</option></select></div>
+                  <div class="col-md-6"><label class="form-label">Kelas Kabin</label><select class="form-select"><option selected>Economy</option></select></div>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6"><label class="form-label">Bandara Asal</label><select class="form-select"><option selected>SIN - Changi</option></select></div>
+                  <div class="col-md-6"><label class="form-label">Bandara Tujuan</label><select class="form-select"><option selected>NRT - Narita</option></select></div>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6"><label class="form-label">Tanggal Penerbangan</label><input type="date" class="form-control" value="2024-11-15"></div>
+                  <div class="col-md-6"><label class="form-label">Flight Number</label><input type="text" class="form-control" value="SQ12"></div>
+              </div>
+              <div class="row mb-3">
+                  <div class="col-md-6"><label class="form-label">Nomor Tiket</label><input type="text" class="form-control" value="TKT-002"></div>
+                  <div class="col-md-6"><label class="form-label">PNR</label><input type="text" class="form-control" value="DEF456"></div>
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-primary px-4">Simpan Perubahan</button></div>
+      </div>
+    </div>
+</div>
+
+<div class="modal fade" id="batalKlaimModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content border-danger">
+        <div class="modal-body text-center pt-4 pb-3">
+          <h4 class="text-danger mb-3">Batalkan Klaim?</h4>
+          <p class="text-muted">Klaim akan dihapus secara permanen dan tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+        <div class="modal-footer justify-content-center bg-light">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Tutup</button>
+          <button type="button" class="btn btn-danger px-4">Ya, Hapus</button>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}

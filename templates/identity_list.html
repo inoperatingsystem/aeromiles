@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% block title %}Identitas Saya — AeroMiles{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Identitas Saya</h4>
+    </div>
+    <button class="btn btn-primary btn-sm shadow-sm fw-medium" data-bs-toggle="modal" data-bs-target="#tambahIdentitasModal">+ Tambah Identitas</button>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr style="font-size: .8rem; color: #6c757d;">
+                    <th>No. Dokumen</th>
+                    <th>Jenis</th>
+                    <th>Negara</th>
+                    <th>Terbit</th>
+                    <th>Habis</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in identities %}
+                <tr style="font-size: .85rem;">
+                    <td class="fw-bold">{{ i.no_dokumen }}</td>
+                    <td>{{ i.jenis }}</td>
+                    <td>{{ i.negara_penerbit }}</td>
+                    <td>{{ i.tanggal_terbit|date:"Y-m-d" }}</td>
+                    <td>{{ i.tanggal_habis|date:"Y-m-d" }}</td>
+                    <td>
+                        <!-- Very basic active status logic for dummy purposes: assuming anything past 2026 is active, else expired -->
+                        {% if i.tanggal_habis|date:"Y-m-d" >= "2026-01-01" %}
+                            <span class="badge bg-success">Aktif</span>
+                        {% else %}
+                            <span class="badge bg-danger">Kedaluwarsa</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-link text-decoration-none p-0 me-2 text-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ i.id }}" title="Edit">✏️</button>
+                        <button class="btn btn-sm btn-link text-decoration-none p-0 text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ i.id }}" title="Hapus">🗑️</button>
+                    </td>
+                </tr>
+
+                <!-- Modal Edit -->
+                <div class="modal fade" id="editModal{{ i.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-light pb-2">
+                                <h6 class="modal-title fw-bold">Edit Identitas</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="edit">
+                                <input type="hidden" name="identity_id" value="{{ i.id }}">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium small">Nomor Dokumen (Tidak dapat diubah)</label>
+                                        <input type="text" class="form-control form-control-sm bg-light" value="{{ i.no_dokumen }}" readonly>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium small">Jenis Dokumen</label>
+                                        <select name="jenis" class="form-select form-select-sm" required>
+                                            <option value="Paspor" {% if i.jenis == 'Paspor' %}selected{% endif %}>Paspor</option>
+                                            <option value="KTP" {% if i.jenis == 'KTP' %}selected{% endif %}>KTP</option>
+                                            <option value="SIM" {% if i.jenis == 'SIM' %}selected{% endif %}>SIM</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-medium small">Negara Penerbit</label>
+                                        <select name="negara_penerbit" class="form-select form-select-sm" required>
+                                            <option value="Indonesia" {% if i.negara_penerbit == 'Indonesia' %}selected{% endif %}>Indonesia</option>
+                                            <option value="Malaysia" {% if i.negara_penerbit == 'Malaysia' %}selected{% endif %}>Malaysia</option>
+                                        </select>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Tanggal Terbit</label>
+                                            <input type="date" name="tanggal_terbit" class="form-control form-control-sm" value="{{ i.tanggal_terbit|date:'Y-m-d' }}" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Tanggal Habis</label>
+                                            <input type="date" name="tanggal_habis" class="form-control form-control-sm" value="{{ i.tanggal_habis|date:'Y-m-d' }}" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="submit" class="btn btn-primary btn-sm px-4">Simpan</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Hapus -->
+                <div class="modal fade" id="deleteModal{{ i.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-body p-4 text-center">
+                                <h5 class="fw-bold mb-3">Hapus Identitas?</h5>
+                                <p class="text-muted small">Tindakan ini tidak dapat dibatalkan.</p>
+                                <form method="post" class="mt-4">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="identity_id" value="{{ i.id }}">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm px-4 me-2" data-bs-dismiss="modal">Batal</button>
+                                    <button type="submit" class="btn btn-danger btn-sm px-4">Hapus</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% empty %}
+                <tr><td colspan="7" class="text-center text-muted py-4">Belum ada identitas yang ditambahkan.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Tambah Identitas -->
+<div class="modal fade" id="tambahIdentitasModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light pb-2">
+                <h6 class="modal-title fw-bold">Tambah Identitas Baru</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Nomor Dokumen</label>
+                        <input type="text" name="no_dokumen" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Jenis Dokumen</label>
+                        <select name="jenis" class="form-select form-select-sm" required>
+                            <option value="Paspor">Paspor</option>
+                            <option value="KTP">KTP</option>
+                            <option value="SIM">SIM</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium small">Negara Penerbit</label>
+                        <select name="negara_penerbit" class="form-select form-select-sm" required>
+                            <option value="Indonesia">Indonesia</option>
+                            <option value="Malaysia">Malaysia</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Tanggal Terbit</label>
+                            <input type="date" name="tanggal_terbit" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Tanggal Habis</label>
+                            <input type="date" name="tanggal_habis" class="form-control form-control-sm" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
