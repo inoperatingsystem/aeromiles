@@ -1,19 +1,34 @@
 from django.db import models
 
+
 class Transfer(models.Model):
-    pengirim_email    = models.EmailField()
-    pengirim_nama     = models.CharField(max_length=100)
-    penerima_email    = models.EmailField()
-    penerima_nama     = models.CharField(max_length=100, default='Penerima Dummy')
-    jumlah_miles      = models.PositiveIntegerField()
-    catatan           = models.TextField(blank=True, null=True)
-    waktu_transfer    = models.DateTimeField(auto_now_add=True)
+    email_member_1 = models.ForeignKey(
+        'main.Member',
+        on_delete=models.CASCADE,
+        db_column='email_member_1',
+        related_name='transfer_keluar',
+    )
+    email_member_2 = models.ForeignKey(
+        'main.Member',
+        on_delete=models.CASCADE,
+        db_column='email_member_2',
+        related_name='transfer_masuk',
+    )
+    timestamp = models.DateTimeField(primary_key=True)
+    jumlah = models.IntegerField()
+    catatan = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         db_table = 'transfer'
+        managed = False
         verbose_name = 'Transfer'
         verbose_name_plural = 'Transfer'
-        ordering = ['-waktu_transfer']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['email_member_1', 'email_member_2', 'timestamp'],
+                name='pk_transfer',
+            )
+        ]
 
     def __str__(self):
-        return f"{self.pengirim_email} -> {self.penerima_email} : {self.jumlah_miles}"
+        return f"{self.email_member_1_id} -> {self.email_member_2_id} : {self.jumlah}"

@@ -42,7 +42,7 @@
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
-      {% if request.user.userprofile.role == 'member' %}
+      {% if request.user.is_member %}
       <!-- ── Navbar Member ── -->
       <ul class="navbar-nav me-auto gap-1">
         <li class="nav-item">
@@ -108,10 +108,12 @@
   </div>
 </nav>
 <div class="navbar-subinfo">
-  {% if request.user.userprofile.role == 'member' %}
-  Masuk sebagai: <strong>{{ request.user.userprofile.full_name }}</strong> — Member
+  {% if request.user.is_member %}
+  Masuk sebagai: <strong>{{ request.user.full_name }}</strong> — Member
+  {% elif request.user.is_staf %}
+  Masuk sebagai: <strong>{{ request.user.full_name }}</strong> — Staf
   {% else %}
-  Masuk sebagai: <strong>{{ request.user.userprofile.full_name }}</strong> — Staf
+  Masuk sebagai: <strong>{{ request.user.full_name }}</strong>
   {% endif %}
 </div>
 {% endif %}

@@ -34,17 +34,36 @@ We use Docker Compose to run the PostgreSQL database and the Django web server t
 docker-compose up --build -d
 ```
 
-### 4. Apply Database Migrations
+### 4. Database Setup (Crucial Step)
 
-Once the containers are running, you need to apply the Django migrations inside the container:
+Since this project relies on a custom database schema (`AEROMILES`), you **must** import the SQL files into the PostgreSQL container before running Django migrations. 
 
+First, import the main schema structure:
+```bash
+cat dumpsql.sql | docker-compose exec -T db psql -U aeromiles_user -d aeromiles_db
+```
+
+Second, populate the database with dummy data:
+```bash
+cat dummy.sql | docker-compose exec -T db psql -U aeromiles_user -d aeromiles_db
+```
+
+Finally, apply Django's built-in migrations (this handles internal tables like user sessions):
 ```bash
 docker-compose exec web python manage.py migrate
 ```
 
 ### 5. Access the Project
 
-The application should now be available at `http://127.0.0.1:8000`.
+The application should now be available at `http://localhost:8000`.
+
+To test the login functionality, you can use any of the pre-inserted dummy accounts. For example:
+- **Login as Member:** 
+  - Email: `user1@mail.com`
+  - Password: `hashedpw1`
+- **Login as Staf:** 
+  - Email: `user51@mail.com`
+  - Password: `hashedpw51`
 
 ## Useful Docker Commands
 
@@ -60,13 +79,13 @@ The application should now be available at `http://127.0.0.1:8000`.
   ```bash
   docker-compose logs -f
   ```
-- **Run any Django management command (like creating a superuser):**
-  ```bash
-  docker-compose exec web python manage.py createsuperuser
-  ```
 - **Run the Django shell:**
   ```bash
   docker-compose exec web python manage.py shell
+  ```
+- **Access the PostgreSQL shell:**
+  ```bash
+  docker-compose exec db psql -U <your_username> -d <your_database_name>
   ```
 
 ## Project Structure
