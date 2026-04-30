@@ -19,3 +19,7 @@ media/
 
 # macOS
 .DS_Store
+
+# SQL
+dummy.sql
+dumpsql.sql
