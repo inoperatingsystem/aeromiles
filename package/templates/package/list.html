@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}Beli Award Miles Package — AeroMiles{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Beli Award Miles Package</h3>
+    <p class="text-muted mb-0">Award Miles saat ini: <strong class="text-dark">{{ award_miles|default:"32,000" }}</strong></p>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row g-4 mt-2">
+    {% for p in packages %}
+    <div class="col-md-3">
+        <div class="card shadow-sm border-0 h-100 position-relative p-3 rounded-4">
+            <div class="position-absolute" style="top: -10px; right: -10px;">
+                <span class="badge rounded-pill text-bg-dark px-3 py-2 shadow-sm" style="font-size: 0.75rem; letter-spacing: 0.5px;">{{ p.id }}</span>
+            </div>
+            <div class="card-body d-flex flex-column text-center mt-2">
+                <div class="mb-3 text-primary d-flex justify-content-center">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-cart3" viewBox="0 0 16 16">
+                            <path d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .49.598l-1 5a.5.5 0 0 1-.465.401l-9.397.472L4.415 11H13a.5.5 0 0 1 0 1H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l.84 4.479 9.144-.459L13.89 4zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+                        </svg>
+                    </div>
+                </div>
+                <h2 class="fw-bold mb-0 text-dark">{{ p.jumlah_award_miles }}</h2>
+                <small class="text-muted mb-3 d-block">Award Miles</small>
+                
+                <h5 class="fw-bold text-primary mb-4">Rp {{ p.harga_paket }}</h5>
+                
+                <button type="button" class="btn btn-primary fw-bold rounded-pill w-100 mt-auto" style="background-color: #0d2b5e; border: none;" data-bs-toggle="modal" data-bs-target="#beliModal{{ p.id }}">
+                    Beli
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Konfirmasi Pembelian -->
+    <div class="modal fade" id="beliModal{{ p.id }}" tabindex="-1" aria-labelledby="beliModalLabel{{ p.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0 mt-2 ms-2">
+                    <h5 class="modal-title fw-bold">Konfirmasi Pembelian</h5>
+                    <button type="button" class="btn-close me-2" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 ms-2">
+                    <p class="text-muted mb-4">Anda akan membeli paket miles berikut:</p>
+                    
+                    <p class="mb-1 text-muted">Award Miles: <strong class="text-success">+{{ p.jumlah_award_miles }}</strong></p>
+                    <p class="mb-4 text-muted">Harga: <strong class="text-dark">Rp {{ p.harga_paket }}</strong></p>
+                    
+                    <form action="{% url 'package:buy' p.id %}" method="post" class="mt-4 text-end">
+                        {% csrf_token %}
+                        <button type="button" class="btn btn-light px-4 me-2 rounded-pill fw-medium border" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-primary px-4 rounded-pill fw-medium" style="background-color: #0d2b5e; border: none;">Konfirmasi Pembelian</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+/* Adjust colors if needed to match design strictly */
+.text-bg-dark {
+    background-color: #0d2b5e !important;
+}
+.text-primary {
+    color: #0d2b5e !important;
+}
+</style>
+{% endblock %}

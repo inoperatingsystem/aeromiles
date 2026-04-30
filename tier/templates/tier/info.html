@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Informasi Tier — AeroMiles{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Info Tier</h3>
+</div>
+
+{% if next_tier %}
+<!-- Progress Box -->
+<div class="card shadow-sm border-0 mb-4 rounded-4" style="border: 1px solid #dee2e6 !important; border-top: 4px solid #0dcaf0 !important;">
+    <div class="card-body p-4">
+        <h6 class="fw-bold mb-3 text-dark">Progress ke Tier Berikutnya: <span class="text-primary">{{ next_tier.nama }}</span></h6>
+        
+        <div class="d-flex justify-content-between align-items-end mb-2">
+            <small class="text-muted fw-medium">Total Miles</small>
+            <strong class="text-dark">{{ current_tier_miles }} <span class="text-muted fw-normal">/ {{ next_tier.minimal_tier_miles_str|default:"0" }}</span></strong>
+        </div>
+        <div class="progress" style="height: 10px; border-radius: 5px;">
+            <div class="progress-bar" role="progressbar" style="width: {{ progress_percentage }}%; background-color: #0d2b5e;" aria-valuenow="{{ progress_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tiers List -->
+<div class="d-flex flex-column gap-3">
+    {% for t in tiers %}
+    <div class="card shadow-sm rounded-4" style="
+        border: {% if current_tier_nama == t.nama %}2px solid #ffc107{% else %}1px solid #dee2e6{% endif %};
+        background-color: {{ t.bg_color }};
+    ">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-4">
+                <div class="d-flex align-items-center justify-content-center text-white rounded-3 me-3 shadow-sm" style="width: 50px; height: 50px; background-color: {{ t.color }};">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-award-fill" viewBox="0 0 16 16">
+                        <path d="m8 0 1.669.864 1.858.282.842 1.68 1.337 1.32L13.4 6l.306 1.854-1.337 1.32-.842 1.68-1.858.282L8 12l-1.669-.864-1.858-.282-.842-1.68-1.337-1.32L2.6 6l-.306-1.854 1.337-1.32.842-1.68L6.331.864z"/>
+                        <path d="M4 11.794V16l4-1 4 1v-4.206l-2.018.306L8 13.126 6.018 12.1z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                        {{ t.nama }}
+                        {% if current_tier_nama == t.nama %}
+                            <span class="badge bg-primary text-light rounded-pill" style="font-size: 0.7rem; padding: 0.35rem 0.6rem;">Tier Anda</span>
+                        {% endif %}
+                    </h5>
+                    <small class="text-muted">Min. {{ t.minimal_frekuensi_terbang }} penerbangan - Min. {{ t.minimal_tier_miles_str|default:"0" }} miles</small>
+                </div>
+            </div>
+            
+            <h6 class="fw-bold text-dark mb-3">Keuntungan:</h6>
+            <ul class="list-unstyled mb-0">
+                {% for k in t.keuntungan %}
+                <li class="mb-2 d-flex align-items-center gap-2 text-muted">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#198754" class="bi bi-check-circle-fill" viewBox="0 0 16 16">
+                        <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/>
+                    </svg>
+                    {{ k }}
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

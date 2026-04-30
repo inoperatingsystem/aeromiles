@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% block title %}Kelola Hadiah & Penyedia — AeroMiles{% endblock %}
+
+{% block extra_css %}
+<style>
+  .badge-aktif   { background: #198754; }
+  .badge-akan    { background: #0d6efd; }
+  .badge-expired { background: #6c757d; }
+  .table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+  .action-btn { font-size:.8rem; padding:.25rem .6rem; }
+  .filter-bar { background:#f8f9fa; border:1px solid #e9ecef; border-radius:.5rem; padding:1rem 1.25rem; margin-bottom:1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h4 class="mb-0 fw-semibold">Kelola Hadiah &amp; Penyedia</h4>
+    <small class="text-muted">Manajemen katalog hadiah program AeroMiles</small>
+  </div>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalTambahHadiah">
+    + Tambah Hadiah
+  </button>
+</div>
+
+<!-- Filter Bar -->
+<form method="get" class="filter-bar row g-2 align-items-end">
+  <div class="col-auto">
+    <label class="form-label mb-1" style="font-size:.8rem;">Penyedia</label>
+    <select name="penyedia" class="form-select form-select-sm" style="min-width:160px;">
+      <option value="">Semua Penyedia</option>
+      {% for p in penyedia_list %}
+        <option value="{{ p.id }}" {% if filter_penyedia == p.id|stringformat:"s" %}selected{% endif %}>{{ p.get_nama }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <label class="form-label mb-1" style="font-size:.8rem;">Status</label>
+    <select name="status" class="form-select form-select-sm">
+      <option value="">Semua Status</option>
+      <option value="aktif"   {% if filter_status == 'aktif'   %}selected{% endif %}>Aktif</option>
+      <option value="expired" {% if filter_status == 'expired' %}selected{% endif %}>Expired</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-secondary btn-sm">Filter</button>
+    <a href="{% url 'hadiah:hadiah_list' %}" class="btn btn-link btn-sm text-muted">Reset</a>
+  </div>
+</form>
+
+<!-- Tabel -->
+<div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>Kode</th><th>Nama</th><th>Deskripsi</th><th>Penyedia</th>
+        <th class="text-end">Miles</th><th>Periode</th><th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for h in hadiah_list %}
+      <tr>
+        <td><code>{{ h.kode_hadiah }}</code></td>
+        <td class="fw-medium">{{ h.nama }}</td>
+        <td><small class="text-muted">{{ h.deskripsi|truncatechars:40|default:"—" }}</small></td>
+        <td>
+          {{ h.id_penyedia.get_nama }}
+          {% if h.id_penyedia.mitra %}
+            <span class="badge text-bg-light border text-muted ms-1" style="font-size:.7rem;">partner</span>
+          {% else %}
+            <span class="badge text-bg-light border text-muted ms-1" style="font-size:.7rem;">airline</span>
+          {% endif %}
+        </td>
+        <td class="text-end fw-semibold">{{ h.miles|floatformat:0 }}</td>
+        <td style="font-size:.85rem;">{{ h.valid_start_date }} — {{ h.program_end }}</td>
+        <td>
+          <button class="btn btn-outline-secondary action-btn me-1"
+                  data-bs-toggle="modal" data-bs-target="#modalEditHadiah"
+                  data-kode="{{ h.kode_hadiah }}"
+                  data-nama="{{ h.nama }}"
+                  data-penyedia="{{ h.id_penyedia.id }}"
+                  data-miles="{{ h.miles }}"
+                  data-deskripsi="{{ h.deskripsi|default:'' }}"
+                  data-valid-start="{{ h.valid_start_date|date:'Y-m-d' }}"
+                  data-program-end="{{ h.program_end|date:'Y-m-d' }}"
+                  data-url="{% url 'hadiah:hadiah_update' h.kode_hadiah %}">✏️</button>
+          {% if h.is_expired %}
+            <button class="btn btn-outline-danger action-btn"
+                    data-bs-toggle="modal" data-bs-target="#modalHapusHadiah"
+                    data-kode="{{ h.kode_hadiah }}" data-nama="{{ h.nama }}"
+                    data-url="{% url 'hadiah:hadiah_delete' h.kode_hadiah %}">🗑️</button>
+          {% else %}
+            <button class="btn btn-outline-danger action-btn" disabled title="Hanya hadiah expired yang bisa dihapus">🗑️</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted py-4">Belum ada data hadiah.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Tambah Hadiah -->
+<div class="modal fade" id="modalTambahHadiah" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-semibold">Tambah Hadiah Baru</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'hadiah:hadiah_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Nama Hadiah <span class="text-danger">*</span></label>
+            <input type="text" name="nama" class="form-control form-control-sm" placeholder="cth. Tiket Domestik PP" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-7">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Penyedia <span class="text-danger">*</span></label>
+              <select name="id_penyedia" class="form-select form-select-sm" required>
+                <option value="">Pilih penyedia…</option>
+                {% for p in penyedia_list %}
+                  <option value="{{ p.id }}">{{ p.get_nama }}{% if p.mitra %} (partner){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-5">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Miles Dibutuhkan <span class="text-danger">*</span></label>
+              <input type="number" name="miles" class="form-control form-control-sm" min="1" placeholder="15000" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Deskripsi</label>
+            <textarea name="deskripsi" class="form-control form-control-sm" rows="2" placeholder="Deskripsi singkat…"></textarea>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Valid Start <span class="text-danger">*</span></label>
+              <input type="date" name="valid_start_date" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Program End <span class="text-danger">*</span></label>
+              <input type="date" name="program_end" class="form-control form-control-sm" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Hadiah -->
+<div class="modal fade" id="modalEditHadiah" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-semibold">Edit Hadiah</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formEditHadiah" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Kode Hadiah</label>
+            <input type="text" id="editKodeDisplay" class="form-control form-control-sm" style="background:#f8f9fa;color:#6c757d;" readonly>
+            <div class="form-text">Kode hadiah tidak dapat diubah.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Nama Hadiah <span class="text-danger">*</span></label>
+            <input type="text" name="nama" id="editNama" class="form-control form-control-sm" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-7">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Penyedia <span class="text-danger">*</span></label>
+              <select name="id_penyedia" id="editPenyedia" class="form-select form-select-sm" required>
+                <option value="">Pilih penyedia…</option>
+                {% for p in penyedia_list %}
+                  <option value="{{ p.id }}">{{ p.get_nama }}{% if p.mitra %} (partner){% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-5">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Miles <span class="text-danger">*</span></label>
+              <input type="number" name="miles" id="editMiles" class="form-control form-control-sm" min="1" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Deskripsi</label>
+            <textarea name="deskripsi" id="editDeskripsi" class="form-control form-control-sm" rows="2"></textarea>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Valid Start <span class="text-danger">*</span></label>
+              <input type="date" name="valid_start_date" id="editValidStart" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:.85rem;font-weight:500;">Program End <span class="text-danger">*</span></label>
+              <input type="date" name="program_end" id="editProgramEnd" class="form-control form-control-sm" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Hapus Hadiah -->
+<div class="modal fade" id="modalHapusHadiah" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-semibold">Hapus Hadiah?</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-1">
+        <p class="text-muted mb-0">
+          Hadiah <strong id="hNama"></strong> (<code id="hKode"></code>)
+          akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+        </p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+        <form id="formHapusHadiah" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Edit modal
+  document.getElementById('modalEditHadiah').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('editKodeDisplay').value = btn.dataset.kode;
+    document.getElementById('editNama').value         = btn.dataset.nama;
+    document.getElementById('editMiles').value        = btn.dataset.miles;
+    document.getElementById('editDeskripsi').value    = btn.dataset.deskripsi;
+    document.getElementById('editValidStart').value   = btn.dataset.validStart;
+    document.getElementById('editProgramEnd').value   = btn.dataset.programEnd;
+    document.getElementById('editPenyedia').value     = btn.dataset.penyedia;
+    document.getElementById('formEditHadiah').action  = btn.dataset.url;
+  });
+  // Hapus modal
+  document.getElementById('modalHapusHadiah').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('hNama').textContent = btn.dataset.nama;
+    document.getElementById('hKode').textContent = btn.dataset.kode;
+    document.getElementById('formHapusHadiah').action = btn.dataset.url;
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}Redeem Hadiah — AeroMiles{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h3 class="fw-bold mb-1">Redeem Hadiah</h3>
+    <p class="text-muted mb-0">Award Miles tersedia: <strong class="text-dark">{{ award_miles }}</strong></p>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Tabs Navigation -->
+<ul class="nav nav-pills mb-4 gap-2" id="redeemTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active bg-light text-dark fw-medium border shadow-sm" id="katalog-tab" data-bs-toggle="pill" data-bs-target="#katalog" type="button" role="tab" aria-controls="katalog" aria-selected="true">Katalog Hadiah</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link text-muted fw-medium border" id="riwayat-tab" data-bs-toggle="pill" data-bs-target="#riwayat" type="button" role="tab" aria-controls="riwayat" aria-selected="false">Riwayat Redeem</button>
+    </li>
+</ul>
+
+<!-- Tabs Content -->
+<div class="tab-content" id="redeemTabContent">
+    
+    <!-- Tab: Katalog Hadiah -->
+    <div class="tab-pane fade show active" id="katalog" role="tabpanel" aria-labelledby="katalog-tab">
+        <div class="row g-4">
+            {% for h in katalog %}
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 h-100 p-2">
+                    <div class="card-body">
+                        <span class="badge bg-secondary text-light mb-3 px-3 py-2 rounded-pill" style="font-size: 0.75rem;">
+                            {{ h.kode_hadiah }} - {{ h.id_penyedia.nama }}
+                        </span>
+                        <h5 class="fw-bold mb-2">{{ h.nama }}</h5>
+                        <p class="text-muted small mb-3" style="min-height: 40px;">{{ h.deskripsi }}</p>
+                        
+                        <div class="mb-2">
+                            <strong class="fs-6">{{ h.miles }} miles</strong>
+                        </div>
+                        <div class="mb-4">
+                            <small class="text-muted d-block">Periode: {{ h.valid_start_date|date:"Y-m-d" }} — {{ h.program_end|date:"Y-m-d" }}</small>
+                        </div>
+                        
+                        <button type="button" class="btn btn-danger fw-bold rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#redeemModal{{ h.kode_hadiah }}">
+                            REDEEM
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Konfirmasi Redeem -->
+            <div class="modal fade" id="redeemModal{{ h.kode_hadiah }}" tabindex="-1" aria-labelledby="redeemModalLabel{{ h.kode_hadiah }}" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-body p-4">
+                            <h5 class="fw-bold mb-3">Redeem Miles</h5>
+                            <p class="text-muted">
+                                Miles akan dipotong sebesar <strong>{{ h.miles }}</strong> untuk reward 
+                                <strong>{{ h.nama }}</strong> dengan kode <strong>{{ h.kode_hadiah }}</strong> dari <strong>{{ h.id_penyedia.nama }}</strong>.
+                            </p>
+                            <form action="{% url 'redeem:member_redeem_create' h.kode_hadiah %}" method="post" class="mt-4 text-end">
+                                {% csrf_token %}
+                                <button type="button" class="btn btn-outline-secondary px-4 me-2 rounded-pill" data-bs-dismiss="modal">Batal</button>
+                                <button type="submit" class="btn btn-primary px-4 rounded-pill">Redeem</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-light text-center py-5 border">
+                    <p class="text-muted mb-0">Belum ada hadiah yang tersedia di katalog saat ini.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Tab: Riwayat Redeem -->
+    <div class="tab-pane fade" id="riwayat" role="tabpanel" aria-labelledby="riwayat-tab">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr style="font-size: 0.85rem; color: #6c757d;">
+                            <th class="ps-4 py-3">Hadiah</th>
+                            <th class="py-3">Waktu</th>
+                            <th class="py-3">Miles</th>
+                            <th class="pe-4 py-3 text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in riwayat %}
+                        <tr style="font-size: 0.9rem;">
+                            <td class="ps-4 fw-medium">{{ r.nama_hadiah }}</td>
+                            <td class="text-muted">{{ r.waktu }}</td>
+                            <td class="text-danger fw-bold">-{{ r.miles }}</td>
+                            <td class="pe-4 text-center">
+                                <button class="btn btn-sm btn-link text-decoration-none text-secondary p-0" title="Cetak Bukti">🖨️</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-5">
+                                Belum ada riwayat penukaran hadiah.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Custom tab styling to match the reference images closely */
+.nav-pills .nav-link {
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+.nav-pills .nav-link.active {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+}
+.nav-pills .nav-link:not(.active) {
+    background-color: transparent;
+    border-color: transparent !important;
+}
+</style>
+{% endblock %}

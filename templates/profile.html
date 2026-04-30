@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% block title %}Pengaturan Profil — AeroMiles{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <h4 class="fw-bold mb-0">Pengaturan Profil</h4>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <h6 class="fw-bold mb-3">Data Profil</h6>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="update_profile" value="1">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-medium small text-muted">Email (Tidak dapat diubah)</label>
+                    <input type="email" class="form-control form-control-sm bg-light" value="{{ user.email }}" readonly>
+                </div>
+
+                {% if role == 'member' %}
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small text-muted">Nomor Member</label>
+                    <input type="text" class="form-control form-control-sm bg-light" value="{{ profile.member_number }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small text-muted">Tanggal Bergabung</label>
+                    <input type="text" class="form-control form-control-sm bg-light" value="{{ profile.join_date|date:'Y-m-d' }}" readonly>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <label class="form-label fw-medium small text-muted">ID Staf (Tidak dapat diubah)</label>
+                    <input type="text" class="form-control form-control-sm bg-light" value="{{ profile.staf_id }}" readonly>
+                </div>
+                {% endif %}
+
+                <div class="col-md-4">
+                    <label class="form-label fw-medium small">Salutation</label>
+                    <select name="salutation" class="form-select form-select-sm" required>
+                        <option value="Mr." {% if profile.salutation == 'Mr.' %}selected{% endif %}>Mr.</option>
+                        <option value="Mrs." {% if profile.salutation == 'Mrs.' %}selected{% endif %}>Mrs.</option>
+                        <option value="Ms." {% if profile.salutation == 'Ms.' %}selected{% endif %}>Ms.</option>
+                    </select>
+                </div>
+                <div class="col-md-8"></div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Nama Depan-Tengah</label>
+                    <input type="text" name="first_mid_name" class="form-control form-control-sm" value="{{ profile.first_mid_name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Nama Belakang</label>
+                    <input type="text" name="last_name" class="form-control form-control-sm" value="{{ profile.last_name }}" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Kewarganegaraan</label>
+                    <select name="nationality" class="form-select form-select-sm" required>
+                        <option value="Indonesia" {% if profile.nationality == 'Indonesia' %}selected{% endif %}>Indonesia</option>
+                        <option value="Malaysia" {% if profile.nationality == 'Malaysia' %}selected{% endif %}>Malaysia</option>
+                        <option value="Singapore" {% if profile.nationality == 'Singapore' %}selected{% endif %}>Singapore</option>
+                    </select>
+                </div>
+                <div class="col-md-6"></div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Country Code</label>
+                    <select name="country_code" class="form-select form-select-sm" required>
+                        <option value="+62" {% if profile.country_code == '+62' %}selected{% endif %}>+62</option>
+                        <option value="+60" {% if profile.country_code == '+60' %}selected{% endif %}>+60</option>
+                        <option value="+65" {% if profile.country_code == '+65' %}selected{% endif %}>+65</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Nomor HP</label>
+                    <input type="text" name="phone_number" class="form-control form-control-sm" value="{{ profile.phone_number }}" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Tanggal Lahir</label>
+                    <input type="date" name="dob" class="form-control form-control-sm" value="{{ profile.dob|date:'Y-m-d' }}" required>
+                </div>
+                {% if role == 'staf' %}
+                <div class="col-md-6">
+                    <label class="form-label fw-medium small">Kode Maskapai</label>
+                    <select name="kode_maskapai" class="form-select form-select-sm" required>
+                        <option value="GA" {% if profile.kode_maskapai == 'GA' %}selected{% endif %}>GA - Garuda Indonesia</option>
+                        <option value="SQ" {% if profile.kode_maskapai == 'SQ' %}selected{% endif %}>SQ - Singapore Airlines</option>
+                        <option value="MH" {% if profile.kode_maskapai == 'MH' %}selected{% endif %}>MH - Malaysia Airlines</option>
+                    </select>
+                </div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm px-4 mt-4 fw-medium">Simpan Perubahan</button>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+        <h6 class="fw-bold mb-3">Ubah Password</h6>
+        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#passwordModal">Ubah Password</button>
+    </div>
+</div>
+
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-light pb-2">
+          <h6 class="modal-title fw-bold">Ubah Password</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="change_password" value="1">
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-medium small">Password Lama</label>
+                    <input type="password" name="old_password" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium small">Password Baru</label>
+                    <input type="password" name="new_password" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-medium small">Konfirmasi Password Baru</label>
+                    <input type="password" name="confirm_password" class="form-control form-control-sm" required>
+                </div>
+            </div>
+            <div class="modal-footer bg-light pt-2 pb-2 border-0">
+                <button type="submit" class="btn btn-primary btn-sm px-4">Simpan</button>
+            </div>
+        </form>
+      </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% block title %}Kelola Member — AeroMiles{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold mb-0">Kelola Member</h4>
+    </div>
+    <button class="btn btn-primary btn-sm shadow-sm fw-medium" data-bs-toggle="modal" data-bs-target="#tambahMemberModal">+ Tambah Member</button>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-4">
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm bg-light" placeholder="Cari nama, email, atau nomor member...">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select form-select-sm bg-light">
+                    <option>Semua Tier</option>
+                    <option>Blue</option>
+                    <option>Silver</option>
+                    <option>Gold</option>
+                    <option>Platinum</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr style="font-size: .8rem; color: #6c757d;">
+                    <th>No. Member</th>
+                    <th>Nama</th>
+                    <th>Email</th>
+                    <th>Tier</th>
+                    <th>Total Miles</th>
+                    <th>Award Miles</th>
+                    <th>Bergabung</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in members %}
+                <tr style="font-size: .85rem;">
+                    <td class="fw-bold">{{ m.member_number }}</td>
+                    <td>{{ m.full_name }}</td>
+                    <td>{{ m.user.email }}</td>
+                    <td>
+                        {% if m.tier == 'Gold' %}
+                            <span class="badge bg-warning text-dark px-2 py-1">{{ m.tier }}</span>
+                        {% elif m.tier == 'Silver' %}
+                            <span class="badge bg-secondary text-light px-2 py-1">{{ m.tier }}</span>
+                        {% elif m.tier == 'Platinum' %}
+                            <span class="badge bg-dark text-light px-2 py-1">{{ m.tier }}</span>
+                        {% else %}
+                            <span class="badge bg-info text-dark px-2 py-1">{{ m.tier }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ m.total_miles }}</td>
+                    <td>{{ m.award_miles }}</td>
+                    <td>{{ m.join_date|date:"Y-m-d" }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-link text-decoration-none p-0 me-2 text-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ m.id }}" title="Edit">✏️</button>
+                        <button class="btn btn-sm btn-link text-decoration-none p-0 text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ m.id }}" title="Hapus">🗑️</button>
+                    </td>
+                </tr>
+
+                <!-- Modal Edit -->
+                <div class="modal fade" id="editModal{{ m.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header bg-light pb-2">
+                                <h6 class="modal-title fw-bold">Edit Member</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="edit">
+                                <input type="hidden" name="member_id" value="{{ m.id }}">
+                                <div class="modal-body">
+                                    <div class="row g-2">
+                                        <div class="col-12">
+                                            <label class="form-label fw-medium small">Salutation</label>
+                                            <select name="salutation" class="form-select form-select-sm" required>
+                                                <option value="Mr." {% if m.salutation == 'Mr.' %}selected{% endif %}>Mr.</option>
+                                                <option value="Mrs." {% if m.salutation == 'Mrs.' %}selected{% endif %}>Mrs.</option>
+                                                <option value="Ms." {% if m.salutation == 'Ms.' %}selected{% endif %}>Ms.</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Nama Depan</label>
+                                            <input type="text" name="first_mid_name" class="form-control form-control-sm" value="{{ m.first_mid_name }}" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Nama Belakang</label>
+                                            <input type="text" name="last_name" class="form-control form-control-sm" value="{{ m.last_name }}" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Kewarganegaraan</label>
+                                            <select name="nationality" class="form-select form-select-sm" required>
+                                                <option value="Indonesia" {% if m.nationality == 'Indonesia' %}selected{% endif %}>Indonesia</option>
+                                                <option value="Malaysia" {% if m.nationality == 'Malaysia' %}selected{% endif %}>Malaysia</option>
+                                                <option value="Singapore" {% if m.nationality == 'Singapore' %}selected{% endif %}>Singapore</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Country Code</label>
+                                            <select name="country_code" class="form-select form-select-sm" required>
+                                                <option value="+62" {% if m.country_code == '+62' %}selected{% endif %}>+62</option>
+                                                <option value="+60" {% if m.country_code == '+60' %}selected{% endif %}>+60</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Nomor HP</label>
+                                            <input type="text" name="phone_number" class="form-control form-control-sm" value="{{ m.phone_number }}" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Tanggal Lahir</label>
+                                            <input type="date" name="dob" class="form-control form-control-sm" value="{{ m.dob|date:'Y-m-d' }}" required>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label fw-medium small">Tier</label>
+                                            <select name="tier" class="form-select form-select-sm" required>
+                                                <option value="Blue" {% if m.tier == 'Blue' %}selected{% endif %}>Blue</option>
+                                                <option value="Silver" {% if m.tier == 'Silver' %}selected{% endif %}>Silver</option>
+                                                <option value="Gold" {% if m.tier == 'Gold' %}selected{% endif %}>Gold</option>
+                                                <option value="Platinum" {% if m.tier == 'Platinum' %}selected{% endif %}>Platinum</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="submit" class="btn btn-primary btn-sm px-4">Simpan</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Hapus -->
+                <div class="modal fade" id="deleteModal{{ m.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-body p-4 text-center">
+                                <h5 class="fw-bold mb-3">Hapus Member?</h5>
+                                <p class="text-muted small">Semua data terkait (Identitas, Klaim, Transfer, Redeem) akan ikut terhapus. Tindakan ini tidak dapat dibatalkan.</p>
+                                <form method="post" class="mt-4">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="member_id" value="{{ m.id }}">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm px-4 me-2" data-bs-dismiss="modal">Batal</button>
+                                    <button type="submit" class="btn btn-danger btn-sm px-4">Hapus</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% empty %}
+                <tr><td colspan="8" class="text-center text-muted py-4">Belum ada member yang terdaftar.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Tambah Member -->
+<div class="modal fade" id="tambahMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-light pb-2">
+                <h6 class="modal-title fw-bold">Tambah Member Baru</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create">
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Email</label>
+                            <input type="email" name="email" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Password</label>
+                            <input type="password" name="password" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12 mt-3"><h6 class="fw-bold mb-1" style="font-size: .85rem;">Data Diri</h6></div>
+                        <div class="col-4">
+                            <label class="form-label fw-medium small">Salutation</label>
+                            <select name="salutation" class="form-select form-select-sm" required>
+                                <option value="Mr.">Mr.</option>
+                                <option value="Mrs.">Mrs.</option>
+                                <option value="Ms.">Ms.</option>
+                            </select>
+                        </div>
+                        <div class="col-8"></div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Nama Depan</label>
+                            <input type="text" name="first_mid_name" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Nama Belakang</label>
+                            <input type="text" name="last_name" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Kewarganegaraan</label>
+                            <select name="nationality" class="form-select form-select-sm" required>
+                                <option value="Indonesia">Indonesia</option>
+                                <option value="Malaysia">Malaysia</option>
+                                <option value="Singapore">Singapore</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Country Code</label>
+                            <select name="country_code" class="form-select form-select-sm" required>
+                                <option value="+62">+62</option>
+                                <option value="+60">+60</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Nomor HP</label>
+                            <input type="text" name="phone_number" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium small">Tanggal Lahir</label>
+                            <input type="date" name="dob" class="form-control form-control-sm" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="submit" class="btn btn-primary btn-sm px-4">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

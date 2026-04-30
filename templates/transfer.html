@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3>Transfer Miles</h3>
+        <p class="text-muted">Award Miles tersedia: <strong class="text-success">{{ award_miles }}</strong></p>
+    </div>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#tambahTransferModal">+ Transfer Baru</button>
+</div>
+
+<h5 class="mb-3">Riwayat Transfer</h5>
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Waktu</th>
+                    <th>Member (Penerima/Pengirim)</th>
+                    <th>Jumlah Miles</th>
+                    <th>Catatan</th>
+                    <th>Tipe</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in transfers %}
+                <tr>
+                    <td class="align-middle">{{ t.waktu }}</td>
+                    <td class="align-middle">{{ t.nama }}<br><small class="text-muted">{{ t.email }}</small></td>
+                    <td class="align-middle fw-bold {% if t.tipe == 'Terima' %}text-success{% else %}text-danger{% endif %}">
+                        {{ t.jumlah }}
+                    </td>
+                    <td class="align-middle text-muted"><i>{{ t.catatan }}</i></td>
+                    <td class="align-middle">
+                        {% if t.tipe == 'Kirim' %}<span class="badge bg-danger">Kirim</span>
+                        {% else %}<span class="badge bg-success">Terima</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="tambahTransferModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title fw-bold">Transfer Miles</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form>
+              <div class="mb-3">
+                  <label class="form-label">Email Penerima *</label>
+                  <input type="email" class="form-control" placeholder="contoh: jane@example.com" required>
+                  <div class="form-text text-danger">Anda tidak dapat mentransfer miles ke diri sendiri.</div>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Jumlah Miles *</label>
+                  <input type="number" class="form-control" min="1" max="32000" required>
+              </div>
+              <div class="mb-3">
+                  <label class="form-label">Catatan (Opsional)</label>
+                  <textarea class="form-control" rows="2" placeholder="Masukkan pesan..."></textarea>
+              </div>
+          </form>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-primary px-4">Kirim Transfer</button>
+        </div>
+      </div>
+    </div>
+</div>
+{% endblock %}

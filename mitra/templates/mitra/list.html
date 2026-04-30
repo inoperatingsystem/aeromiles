@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Kelola Mitra — AeroMiles{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table th { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; }
+  .action-btn { font-size:.8rem; padding:.25rem .6rem; }
+  .id-badge { display:inline-block; background:#e9ecef; color:#495057; border-radius:.3rem; padding:.1rem .4rem; font-size:.75rem; font-family:monospace; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+  {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="mb-0 fw-semibold">Kelola Mitra</h4>
+    <small class="text-muted">Manajemen mitra program AeroMiles</small>
+  </div>
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalTambahMitra">+ Tambah Mitra</button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>Email</th><th>ID Penyedia</th><th>Nama Mitra</th>
+        <th>Tanggal Kerja Sama</th><th class="text-center">Aksi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in mitra_list %}
+      <tr>
+        <td>{{ m.email_mitra }}</td>
+        <td><span class="id-badge">#{{ m.id_penyedia.id }}</span></td>
+        <td class="fw-medium">{{ m.nama_mitra }}</td>
+        <td>{{ m.tanggal_kerja_sama }}</td>
+        <td class="text-center">
+          <button class="btn btn-outline-secondary action-btn me-1"
+                  data-bs-toggle="modal" data-bs-target="#modalEditMitra"
+                  data-email="{{ m.email_mitra }}"
+                  data-nama="{{ m.nama_mitra }}"
+                  data-penyedia-id="{{ m.id_penyedia.id }}"
+                  data-tanggal="{{ m.tanggal_kerja_sama|date:'Y-m-d' }}"
+                  data-url="{% url 'mitra:mitra_update' m.email_mitra %}">✏️</button>
+          <button class="btn btn-outline-danger action-btn"
+                  data-bs-toggle="modal" data-bs-target="#modalHapusMitra"
+                  data-email="{{ m.email_mitra }}"
+                  data-nama="{{ m.nama_mitra }}"
+                  data-jumlah="{{ m.id_penyedia.hadiah_list.count }}"
+                  data-url="{% url 'mitra:mitra_delete' m.email_mitra %}">🗑️</button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="text-center text-muted py-4">Belum ada data mitra.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Tambah Mitra -->
+<div class="modal fade" id="modalTambahMitra" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-semibold">Tambah Mitra Baru</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'mitra:mitra_create' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Email Mitra <span class="text-danger">*</span></label>
+            <input type="email" name="email_mitra" class="form-control form-control-sm" placeholder="partner@example.com" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Nama Mitra <span class="text-danger">*</span></label>
+            <input type="text" name="nama_mitra" class="form-control form-control-sm" placeholder="cth. TravelokaPartner" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Tanggal Kerja Sama <span class="text-danger">*</span></label>
+            <input type="date" name="tanggal_kerja_sama" class="form-control form-control-sm" required>
+          </div>
+          <div class="form-text">ID Penyedia akan di-generate otomatis oleh sistem.</div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Mitra -->
+<div class="modal fade" id="modalEditMitra" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-semibold">Edit Mitra</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="formEditMitra" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Email Mitra</label>
+            <input type="email" id="editEmail" class="form-control form-control-sm" style="background:#f8f9fa;color:#6c757d;" readonly>
+            <div class="form-text">Email mitra tidak dapat diubah (Primary Key).</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">ID Penyedia</label>
+            <input type="text" id="editPenyediaId" class="form-control form-control-sm" style="background:#f8f9fa;color:#6c757d;" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Nama Mitra <span class="text-danger">*</span></label>
+            <input type="text" name="nama_mitra" id="editNama" class="form-control form-control-sm" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.85rem;font-weight:500;">Tanggal Kerja Sama <span class="text-danger">*</span></label>
+            <input type="date" name="tanggal_kerja_sama" id="editTanggal" class="form-control form-control-sm" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+          <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Hapus Mitra -->
+<div class="modal fade" id="modalHapusMitra" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-semibold">Hapus Mitra?</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-1">
+        <p class="text-muted mb-2">
+          Penghapusan mitra akan berpengaruh pada hadiah yang disediakan oleh mitra ini.
+        </p>
+        <div id="mWarning" class="alert alert-warning py-2 mb-0" style="font-size:.85rem;display:none;">
+          ⚠️ Mitra ini memiliki <strong id="mJumlah"></strong> yang akan ikut terhapus.
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+        <form id="formHapusMitra" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.getElementById('modalEditMitra').addEventListener('show.bs.modal', e => {
+    const btn = e.relatedTarget;
+    document.getElementById('editEmail').value      = btn.dataset.email;
+    document.getElementById('editPenyediaId').value = '#' + btn.dataset.penyediaId;
+    document.getElementById('editNama').value        = btn.dataset.nama;
+    document.getElementById('editTanggal').value     = btn.dataset.tanggal;
+    document.getElementById('formEditMitra').action  = btn.dataset.url;
+  });
+  document.getElementById('modalHapusMitra').addEventListener('show.bs.modal', e => {
+    const btn    = e.relatedTarget;
+    const jumlah = parseInt(btn.dataset.jumlah);
+    document.getElementById('mJumlah').textContent = jumlah + ' hadiah';
+    document.getElementById('formHapusMitra').action = btn.dataset.url;
+    document.getElementById('mWarning').style.display = jumlah > 0 ? 'block' : 'none';
+  });
+</script>
+{% endblock %}

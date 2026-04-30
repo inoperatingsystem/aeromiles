@@ -1,0 +1,24 @@
+from django.utils.functional import SimpleLazyObject
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth import SESSION_KEY
+from .models import Pengguna
+
+def get_pengguna(request):
+    if not hasattr(request, '_cached_user'):
+        user_id = request.session.get(SESSION_KEY)
+        if user_id:
+            try:
+                request._cached_user = Pengguna.objects.get(email=user_id)
+            except Pengguna.DoesNotExist:
+                request._cached_user = AnonymousUser()
+        else:
+            request._cached_user = AnonymousUser()
+    return request._cached_user
+
+class PenggunaAuthMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.user = SimpleLazyObject(lambda: get_pengguna(request))
+        return self.get_response(request)
