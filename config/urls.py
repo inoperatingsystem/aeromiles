@@ -24,4 +24,8 @@ urlpatterns = [
     path('mitra/', include('mitra.urls', namespace='mitra')),
     path('klaim/', include('klaim.urls', namespace='klaim')),
     path('transfer/', include('transfer.urls', namespace='transfer')),
+    path('redeem/', include('redeem.urls', namespace='redeem')),
+    path('package/', include('package.urls', namespace='package')),
+    path('tier/', include('tier.urls', namespace='tier')),
+    path('laporan/', include('laporan.urls', namespace='laporan')),
 ]

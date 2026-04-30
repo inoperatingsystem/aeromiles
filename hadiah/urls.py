@@ -8,5 +8,4 @@ urlpatterns = [
     path('manage-rewards/create/',                   views.hadiah_create, name='hadiah_create'),
     path('manage-rewards/<str:kode_hadiah>/edit/',   views.hadiah_update, name='hadiah_update'),
     path('manage-rewards/<str:kode_hadiah>/delete/', views.hadiah_delete, name='hadiah_delete'),
-    path('', views.hadiah_list, name='list'),
 ]

@@ -59,9 +59,15 @@
           <a class="nav-link {% if '/transfer/' in request.path %}active{% endif %}"
              href="{% url 'transfer:transfer_list' %}">Transfer Miles</a>
         </li>
-        <li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">Redeem Hadiah</a></li>
-        <li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">Beli Package</a></li>
-        <li class="nav-item"><a class="nav-link disabled" href="#" tabindex="-1">Info Tier</a></li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/redeem/' in request.path %}active{% endif %}" href="{% url 'redeem:member_redeem_list' %}">Redeem Hadiah</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/package/' in request.path %}active{% endif %}" href="{% url 'package:list' %}">Beli Package</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/tier/' in request.path %}active{% endif %}" href="{% url 'tier:info' %}">Info Tier</a>
+        </li>
         <li class="nav-item">
             <a class="nav-link {% if request.path == '/profile/' %}active{% endif %}" href="{% url 'main:profile' %}">Pengaturan Profil</a>
         </li>
@@ -89,7 +95,7 @@
              href="{% url 'mitra:mitra_list' %}">Kelola Mitra</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link disabled" href="#" tabindex="-1">Laporan Transaksi</a>
+          <a class="nav-link {% if '/laporan/' in request.path %}active{% endif %}" href="{% url 'laporan:list' %}">Laporan Transaksi</a>
         </li>
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/profile/' %}active{% endif %}"
