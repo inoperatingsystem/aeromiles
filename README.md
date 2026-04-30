@@ -24,6 +24,8 @@ Create a `.env` file in the root directory. You can use this for any Django sett
 POSTGRES_DB=aeromiles_db
 POSTGRES_USER=aeromiles_user
 POSTGRES_PASSWORD=aeromiles_password
+DB_HOST=db
+DB_PORT=5432
 ```
 
 ### 3. Build and Start the Containers
@@ -40,12 +42,12 @@ Since this project relies on a custom database schema (`AEROMILES`), you **must*
 
 First, import the main schema structure:
 ```bash
-cat dumpsql.sql | docker-compose exec -T db psql -U aeromiles_user -d aeromiles_db
+cat dumpsql.sql | docker-compose exec -T db psql -U <your_username> -d <your_database_name>
 ```
 
 Second, populate the database with dummy data:
 ```bash
-cat dummy.sql | docker-compose exec -T db psql -U aeromiles_user -d aeromiles_db
+cat dummy.sql | docker-compose exec -T db psql -U <your_username> -d <your_database_name>
 ```
 
 Finally, apply Django's built-in migrations (this handles internal tables like user sessions):
