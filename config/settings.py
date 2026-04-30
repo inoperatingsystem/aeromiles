@@ -88,6 +88,9 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'aeromiles_password'),
         'HOST': os.getenv('DB_HOST', 'db'),
         'PORT': os.getenv('DB_PORT', '5432'),
+        'OPTIONS': {
+            'options': '-c search_path=aeromiles,public'
+        },
     }
 }
 

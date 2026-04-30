@@ -20,6 +20,7 @@ class Mitra(models.Model):
 
     class Meta:
         db_table = 'mitra'
+        managed = False
         verbose_name = 'Mitra'
         verbose_name_plural = 'Mitra'
 

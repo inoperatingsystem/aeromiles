@@ -3,8 +3,11 @@ from django.utils import timezone
 
 
 class Penyedia(models.Model):
+    id = models.AutoField(primary_key=True)
+
     class Meta:
         db_table = 'penyedia'
+        managed = False
         verbose_name = 'Penyedia'
         verbose_name_plural = 'Penyedia'
 
@@ -34,6 +37,7 @@ class Hadiah(models.Model):
 
     class Meta:
         db_table = 'hadiah'
+        managed = False
         verbose_name = 'Hadiah'
         verbose_name_plural = 'Hadiah'
 
