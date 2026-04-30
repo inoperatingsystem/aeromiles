@@ -24,8 +24,28 @@ class Pengguna(models.Model):
         managed = False
 
     @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    @property
     def full_name(self):
         return f"{self.salutation} {self.first_mid_name} {self.last_name}"
+
+    @property
+    def is_member(self):
+        return hasattr(self, 'member')
+
+    @property
+    def is_staf(self):
+        return hasattr(self, 'staf')
 
     def __str__(self):
         return self.full_name

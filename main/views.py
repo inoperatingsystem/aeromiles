@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password, check_password
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -95,14 +95,13 @@ def register_view(request):
                     messages.error(request, 'Kode maskapai tidak valid.')
                     return redirect('main:register')
 
-            if User.objects.filter(username=email).exists() or Pengguna.objects.filter(email=email).exists():
+            if Pengguna.objects.filter(email=email).exists():
                 messages.error(request, 'Email sudah terdaftar.')
                 return redirect('main:register')
 
-            user = User.objects.create_user(username=email, email=email, password=password)
             pengguna = Pengguna.objects.create(
                 email=email,
-                password=user.password,
+                password=make_password(password),
                 salutation=data.get('salutation'),
                 first_mid_name=data.get('first_mid_name'),
                 last_name=data.get('last_name'),
@@ -227,14 +226,13 @@ def profile_view(request):
             new_password = request.POST.get('new_password')
             confirm_password = request.POST.get('confirm_password')
             
-            if not request.user.check_password(old_password):
+            if not (check_password(old_password, request.user.password) or request.user.password == old_password):
                 messages.error(request, 'Password lama salah.')
             elif new_password != confirm_password:
                 messages.error(request, 'Konfirmasi password baru tidak cocok.')
             else:
-                request.user.set_password(new_password)
+                request.user.password = make_password(new_password)
                 request.user.save()
-                update_session_auth_hash(request, request.user) # Keep user logged in
                 messages.success(request, 'Password berhasil diubah.')
                 return redirect('main:profile')
 
@@ -289,7 +287,6 @@ def member_list_view(request):
             pengguna = member.email
             member.delete()
             Pengguna.objects.filter(email=pengguna.email).delete()
-            User.objects.filter(username=pengguna.email).delete()
             messages.success(request, 'Member berhasil dihapus.')
         elif action == 'edit' and member_id:
             member = get_object_or_404(Member, nomor_member=member_id)
@@ -315,7 +312,7 @@ def member_list_view(request):
         elif action == 'create':
             email = request.POST.get('email')
             password = request.POST.get('password')
-            if User.objects.filter(username=email).exists() or Pengguna.objects.filter(email=email).exists():
+            if Pengguna.objects.filter(email=email).exists():
                 messages.error(request, 'Email sudah terdaftar.')
                 return redirect('main:member_list')
 
@@ -324,10 +321,9 @@ def member_list_view(request):
                 messages.error(request, 'Tier belum tersedia. Hubungi admin.')
                 return redirect('main:member_list')
 
-            user = User.objects.create_user(username=email, email=email, password=password)
             pengguna = Pengguna.objects.create(
                 email=email,
-                password=user.password,
+                password=make_password(password),
                 salutation=request.POST.get('salutation'),
                 first_mid_name=request.POST.get('first_mid_name'),
                 last_name=request.POST.get('last_name'),

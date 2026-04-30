@@ -1,5 +1,4 @@
 from django import forms
-from django.contrib.auth.models import User
 from .models import Pengguna
 
 
@@ -34,7 +33,7 @@ class RegisterForm(forms.Form):
         if password and confirm_password and password != confirm_password:
             self.add_error('confirm_password', 'Password dan konfirmasi password tidak cocok.')
 
-        if email and (User.objects.filter(username=email).exists() or Pengguna.objects.filter(email=email).exists()):
+        if email and Pengguna.objects.filter(email=email).exists():
             self.add_error('email', 'Email sudah terdaftar.')
 
         if role == 'staf' and not kode_maskapai:
