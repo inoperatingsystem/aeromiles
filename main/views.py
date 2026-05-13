@@ -38,9 +38,13 @@ def _get_member(request):
         """, [pengguna.email])
         row = dictfetchone(cursor)
         if row:
-            # We add tier_nama to the object manually or just use the dict
-            member = Member(**{k: v for k, v in row.items() if k != 'tier_nama'})
-            member.tier_nama = row['tier_nama']
+            # Rename FK fields to use _id suffix for Django model compatibility
+            data = {k: v for k, v in row.items() if k != 'tier_nama'}
+            if 'email' in data: data['email_id'] = data.pop('email')
+            if 'id_tier' in data: data['id_tier_id'] = data.pop('id_tier')
+            
+            member = Member(**data)
+            member.tier_nama = row.get('tier_nama')
             return member
     return None
 
@@ -53,7 +57,10 @@ def _get_staf(request):
         cursor.execute("SELECT * FROM staf WHERE email = %s", [pengguna.email])
         row = dictfetchone(cursor)
         if row:
-            return Staf(**row)
+            data = row.copy()
+            if 'email' in data: data['email_id'] = data.pop('email')
+            if 'kode_maskapai' in data: data['kode_maskapai_id'] = data.pop('kode_maskapai')
+            return Staf(**data)
     return None
 
 
@@ -82,7 +89,6 @@ def _generate_staf_id():
         count = cursor.fetchone()[0]
         return f"S{count + 1:06d}"
 
-# FITUR: Login
 def login_view(request):
     if request.user.is_authenticated:
         return redirect('main:dashboard')
@@ -98,12 +104,10 @@ def login_view(request):
             messages.error(request, 'Email atau password salah.')
     return render(request, 'login.html')
 
-# FITUR: Logout
 def logout_view(request):
     logout(request)
     return redirect('main:login')
 
-# FITUR: Registrasi
 def register_view(request):
     if request.user.is_authenticated:
         return redirect('main:dashboard')
@@ -117,7 +121,6 @@ def register_view(request):
             password = data.get('password')
 
             with connection.cursor() as cursor:
-                # Check if email exists
                 cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
                 if cursor.fetchone():
                     messages.error(request, 'Email sudah terdaftar.')
@@ -141,7 +144,6 @@ def register_view(request):
                         return redirect('main:register')
                     maskapai_code = row[0]
 
-                # Create Pengguna
                 cursor.execute("""
                     INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -190,7 +192,6 @@ def register_view(request):
         
     return render(request, 'register.html', {'form': form})
 
-# FITUR: Dashboard
 @login_required(login_url='main:login')
 def dashboard_view(request):
     pengguna = _get_pengguna(request)
@@ -198,8 +199,8 @@ def dashboard_view(request):
         messages.error(request, 'Data pengguna tidak ditemukan. Silakan login ulang.')
         return redirect('main:login')
 
-    member = Member.objects.filter(email=pengguna).select_related('id_tier').first()
-    staf = Staf.objects.filter(email=pengguna).select_related('kode_maskapai').first()
+    member = _get_member(request)
+    staf = _get_staf(request)
 
     role = 'member' if member else 'staf' if staf else 'guest'
     context = {
@@ -214,7 +215,7 @@ def dashboard_view(request):
     if role == 'member' and member:
         context.update({
             'nomor_member': member.nomor_member,
-            'tier': member.id_tier.nama if member.id_tier_id else member.id_tier_id,
+            'tier': member.tier_nama if hasattr(member, 'tier_nama') else member.id_tier_id,
             'total_miles': member.total_miles or 0,
             'award_miles': member.award_miles or 0,
             'tanggal_bergabung': member.tanggal_bergabung,
@@ -223,14 +224,28 @@ def dashboard_view(request):
         context.update({
             'id_staf': staf.id_staf,
             'maskapai': staf.kode_maskapai_id,
-            'klaim_menunggu': '2',
-            'klaim_disetujui': '1',
-            'klaim_ditolak': '1',
+            'klaim_menunggu': 0,
+            'klaim_disetujui': 0,
+            'klaim_ditolak': 0,
         })
+        
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT status_penerimaan, COUNT(*) 
+                FROM claim_missing_miles 
+                WHERE maskapai = %s 
+                GROUP BY status_penerimaan
+            """, [staf.kode_maskapai_id])
+            for status, count in cursor.fetchall():
+                if status == 'Menunggu':
+                    context['klaim_menunggu'] = count
+                elif status == 'Disetujui':
+                    context['klaim_disetujui'] = count
+                elif status == 'Ditolak':
+                    context['klaim_ditolak'] = count
 
     return render(request, 'dashboard.html', context)
 
-# FITUR: Pengaturan Profil & Ubah Password
 @login_required(login_url='main:login')
 def profile_view(request):
     pengguna = _get_pengguna(request)
@@ -238,8 +253,8 @@ def profile_view(request):
         messages.error(request, 'Data pengguna tidak ditemukan.')
         return redirect('main:login')
 
-    member = Member.objects.filter(email=pengguna).first()
-    staf = Staf.objects.filter(email=pengguna).first()
+    member = _get_member(request)
+    staf = _get_staf(request)
     role = 'member' if member else 'staf' if staf else 'guest'
 
     if request.method == 'POST':
@@ -249,7 +264,6 @@ def profile_view(request):
                 data = form.cleaned_data
                 
                 with connection.cursor() as cursor:
-                    # Update Pengguna
                     cursor.execute("""
                         UPDATE pengguna 
                         SET salutation = %s, first_mid_name = %s, last_name = %s, 
@@ -298,7 +312,6 @@ def profile_view(request):
                 with connection.cursor() as cursor:
                     cursor.execute("UPDATE pengguna SET password = %s WHERE email = %s", [hashed_password, pengguna.email])
                 
-                # Update session password to keep user logged in
                 request.user.password = hashed_password
                 update_session_auth_hash(request, request.user)
                 
@@ -339,7 +352,6 @@ def profile_view(request):
     }
     return render(request, 'profile.html', context)
 
-# FITUR: Manajemen Data Member (Khusus Staf)
 @login_required(login_url='main:login')
 def member_list_view(request):
     staf = _get_staf(request)
@@ -349,11 +361,10 @@ def member_list_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        member_id = request.POST.get('member_id') # This is nomor_member
+        member_id = request.POST.get('member_id')
         
         with connection.cursor() as cursor:
             if action == 'delete' and member_id:
-                # Get email first
                 cursor.execute("SELECT email FROM member WHERE nomor_member = %s", [member_id])
                 row = cursor.fetchone()
                 if row:
@@ -363,7 +374,6 @@ def member_list_view(request):
                     messages.success(request, 'Member berhasil dihapus.')
             
             elif action == 'edit' and member_id:
-                # Get email
                 cursor.execute("SELECT email FROM member WHERE nomor_member = %s", [member_id])
                 row = cursor.fetchone()
                 if row:
@@ -376,7 +386,6 @@ def member_list_view(request):
                         return redirect('main:member_list')
                     tier_id = tier_row[0]
 
-                    # Update Pengguna
                     cursor.execute("""
                         UPDATE pengguna 
                         SET salutation = %s, first_mid_name = %s, last_name = %s, 
@@ -393,7 +402,6 @@ def member_list_view(request):
                         request.POST.get('dob'),
                         email
                     ])
-                    # Update Member
                     cursor.execute("UPDATE member SET id_tier = %s WHERE nomor_member = %s", [tier_id, member_id])
                     messages.success(request, 'Data member berhasil diperbarui.')
             
@@ -413,7 +421,6 @@ def member_list_view(request):
                     return redirect('main:member_list')
                 tier_id = tier_row[0]
 
-                # Create Pengguna
                 cursor.execute("""
                     INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, kewarganegaraan, tanggal_lahir)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
@@ -428,7 +435,6 @@ def member_list_view(request):
                     request.POST.get('nationality'),
                     request.POST.get('dob')
                 ])
-                # Create Member
                 cursor.execute("""
                     INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
                     VALUES (%s, %s, %s, %s, %s, %s)
@@ -455,7 +461,6 @@ def member_list_view(request):
     
     members = []
     for row in rows:
-        # Create a structure that mimics what the template expects
         members.append(SimpleNamespace(
             id=row['nomor_member'],
             member_number=row['nomor_member'],
@@ -479,7 +484,6 @@ def member_list_view(request):
     }
     return render(request, 'member_list.html', context)
 
-# FITUR: Manajemen Identitas (Khusus Member)
 @login_required(login_url='main:login')
 def identity_list_view(request):
     member = _get_member(request)
@@ -489,7 +493,7 @@ def identity_list_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        identity_id = request.POST.get('identity_id') # This is nomor
+        identity_id = request.POST.get('identity_id')
         
         with connection.cursor() as cursor:
             if action == 'delete' and identity_id:
