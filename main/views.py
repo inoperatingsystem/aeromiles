@@ -8,44 +8,79 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
+from django.db import connection
 from .models import Pengguna, Member, Staf, Identitas, Tier, Maskapai
 from .forms import RegisterForm, ProfileForm
+from .utils import dictfetchall, dictfetchone
 
 
 def _get_pengguna(request):
     if not request.user.is_authenticated:
         return None
-    return Pengguna.objects.filter(email=request.user.email).first()
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM pengguna WHERE email = %s", [request.user.email])
+        row = dictfetchone(cursor)
+        if row:
+            return Pengguna(**row)
+    return None
 
 
 def _get_member(request):
     pengguna = _get_pengguna(request)
     if not pengguna:
         return None
-    return Member.objects.filter(email=pengguna).select_related('email', 'id_tier').first()
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT m.*, t.nama as tier_nama 
+            FROM member m 
+            JOIN tier t ON m.id_tier = t.id_tier 
+            WHERE m.email = %s
+        """, [pengguna.email])
+        row = dictfetchone(cursor)
+        if row:
+            # We add tier_nama to the object manually or just use the dict
+            member = Member(**{k: v for k, v in row.items() if k != 'tier_nama'})
+            member.tier_nama = row['tier_nama']
+            return member
+    return None
 
 
 def _get_staf(request):
     pengguna = _get_pengguna(request)
     if not pengguna:
         return None
-    return Staf.objects.filter(email=pengguna).select_related('email', 'kode_maskapai').first()
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM staf WHERE email = %s", [pengguna.email])
+        row = dictfetchone(cursor)
+        if row:
+            return Staf(**row)
+    return None
 
 
 def _generate_member_number():
-    for _ in range(5):
-        value = f"M{random.randint(100000, 999999)}"
-        if not Member.objects.filter(nomor_member=value).exists():
-            return value
-    return f"M{Member.objects.count() + 1:06d}"
+    with connection.cursor() as cursor:
+        for _ in range(5):
+            value = f"M{random.randint(100000, 999999)}"
+            cursor.execute("SELECT 1 FROM member WHERE nomor_member = %s", [value])
+            if not cursor.fetchone():
+                return value
+        
+        cursor.execute("SELECT COUNT(*) FROM member")
+        count = cursor.fetchone()[0]
+        return f"M{count + 1:06d}"
 
 
 def _generate_staf_id():
-    for _ in range(5):
-        value = f"S{random.randint(100000, 999999)}"
-        if not Staf.objects.filter(id_staf=value).exists():
-            return value
-    return f"S{Staf.objects.count() + 1:06d}"
+    with connection.cursor() as cursor:
+        for _ in range(5):
+            value = f"S{random.randint(100000, 999999)}"
+            cursor.execute("SELECT 1 FROM staf WHERE id_staf = %s", [value])
+            if not cursor.fetchone():
+                return value
+        
+        cursor.execute("SELECT COUNT(*) FROM staf")
+        count = cursor.fetchone()[0]
+        return f"S{count + 1:06d}"
 
 # FITUR: Login
 def login_view(request):
@@ -81,51 +116,68 @@ def register_view(request):
             email = data.get('email')
             password = data.get('password')
 
-            tier = None
-            if role == 'member':
-                tier = Tier.objects.order_by('id_tier').first()
-                if not tier:
-                    messages.error(request, 'Tier belum tersedia. Hubungi admin untuk menambahkan data tier.')
+            with connection.cursor() as cursor:
+                # Check if email exists
+                cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
+                if cursor.fetchone():
+                    messages.error(request, 'Email sudah terdaftar.')
                     return redirect('main:register')
 
-            maskapai = None
-            if role == 'staf':
-                maskapai = Maskapai.objects.filter(kode_maskapai=data.get('kode_maskapai')).first()
-                if not maskapai:
-                    messages.error(request, 'Kode maskapai tidak valid.')
-                    return redirect('main:register')
+                tier_id = None
+                if role == 'member':
+                    cursor.execute("SELECT id_tier FROM tier ORDER BY id_tier LIMIT 1")
+                    row = cursor.fetchone()
+                    if not row:
+                        messages.error(request, 'Tier belum tersedia. Hubungi admin untuk menambahkan data tier.')
+                        return redirect('main:register')
+                    tier_id = row[0]
 
-            if Pengguna.objects.filter(email=email).exists():
-                messages.error(request, 'Email sudah terdaftar.')
-                return redirect('main:register')
+                maskapai_code = None
+                if role == 'staf':
+                    cursor.execute("SELECT kode_maskapai FROM maskapai WHERE kode_maskapai = %s", [data.get('kode_maskapai')])
+                    row = cursor.fetchone()
+                    if not row:
+                        messages.error(request, 'Kode maskapai tidak valid.')
+                        return redirect('main:register')
+                    maskapai_code = row[0]
 
-            pengguna = Pengguna.objects.create(
-                email=email,
-                password=make_password(password),
-                salutation=data.get('salutation'),
-                first_mid_name=data.get('first_mid_name'),
-                last_name=data.get('last_name'),
-                country_code=data.get('country_code'),
-                mobile_number=data.get('phone_number'),
-                tanggal_lahir=data.get('dob'),
-                kewarganegaraan=data.get('nationality'),
-            )
+                # Create Pengguna
+                cursor.execute("""
+                    INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    email,
+                    make_password(password),
+                    data.get('salutation'),
+                    data.get('first_mid_name'),
+                    data.get('last_name'),
+                    data.get('country_code'),
+                    data.get('phone_number'),
+                    data.get('dob'),
+                    data.get('nationality')
+                ])
 
-            if role == 'member':
-                Member.objects.create(
-                    email=pengguna,
-                    nomor_member=_generate_member_number(),
-                    tanggal_bergabung=timezone.now().date(),
-                    id_tier=tier,
-                    award_miles=0,
-                    total_miles=0,
-                )
-            else:
-                Staf.objects.create(
-                    email=pengguna,
-                    id_staf=_generate_staf_id(),
-                    kode_maskapai=maskapai,
-                )
+                if role == 'member':
+                    cursor.execute("""
+                        INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, [
+                        email,
+                        _generate_member_number(),
+                        timezone.now().date(),
+                        tier_id,
+                        0,
+                        0
+                    ])
+                else:
+                    cursor.execute("""
+                        INSERT INTO staf (email, id_staf, kode_maskapai)
+                        VALUES (%s, %s, %s)
+                    """, [
+                        email,
+                        _generate_staf_id(),
+                        maskapai_code
+                    ])
 
             messages.success(request, 'Registrasi berhasil. Silakan login.')
             return redirect('main:login')
@@ -195,24 +247,35 @@ def profile_view(request):
             form = ProfileForm(request.POST)
             if form.is_valid():
                 data = form.cleaned_data
-                pengguna.salutation = data.get('salutation')
-                pengguna.first_mid_name = data.get('first_mid_name')
-                pengguna.last_name = data.get('last_name')
-                pengguna.country_code = data.get('country_code')
-                pengguna.mobile_number = data.get('phone_number')
-                pengguna.tanggal_lahir = data.get('dob')
-                pengguna.kewarganegaraan = data.get('nationality')
-                pengguna.save()
+                
+                with connection.cursor() as cursor:
+                    # Update Pengguna
+                    cursor.execute("""
+                        UPDATE pengguna 
+                        SET salutation = %s, first_mid_name = %s, last_name = %s, 
+                            country_code = %s, mobile_number = %s, tanggal_lahir = %s, 
+                            kewarganegaraan = %s
+                        WHERE email = %s
+                    """, [
+                        data.get('salutation'),
+                        data.get('first_mid_name'),
+                        data.get('last_name'),
+                        data.get('country_code'),
+                        data.get('phone_number'),
+                        data.get('dob'),
+                        data.get('nationality'),
+                        pengguna.email
+                    ])
 
-                if role == 'staf' and staf:
-                    kode_maskapai = data.get('kode_maskapai')
-                    if kode_maskapai:
-                        maskapai = Maskapai.objects.filter(kode_maskapai=kode_maskapai).first()
-                        if not maskapai:
-                            messages.error(request, 'Kode maskapai tidak valid.')
-                            return redirect('main:profile')
-                        staf.kode_maskapai = maskapai
-                        staf.save()
+                    if role == 'staf' and staf:
+                        kode_maskapai = data.get('kode_maskapai')
+                        if kode_maskapai:
+                            cursor.execute("SELECT 1 FROM maskapai WHERE kode_maskapai = %s", [kode_maskapai])
+                            if not cursor.fetchone():
+                                messages.error(request, 'Kode maskapai tidak valid.')
+                                return redirect('main:profile')
+                            
+                            cursor.execute("UPDATE staf SET kode_maskapai = %s WHERE email = %s", [kode_maskapai, pengguna.email])
 
                 messages.success(request, 'Profil berhasil diperbarui.')
                 return redirect('main:profile')
@@ -231,8 +294,14 @@ def profile_view(request):
             elif new_password != confirm_password:
                 messages.error(request, 'Konfirmasi password baru tidak cocok.')
             else:
-                request.user.password = make_password(new_password)
-                request.user.save()
+                hashed_password = make_password(new_password)
+                with connection.cursor() as cursor:
+                    cursor.execute("UPDATE pengguna SET password = %s WHERE email = %s", [hashed_password, pengguna.email])
+                
+                # Update session password to keep user logged in
+                request.user.password = hashed_password
+                update_session_auth_hash(request, request.user)
+                
                 messages.success(request, 'Password berhasil diubah.')
                 return redirect('main:profile')
 
@@ -280,89 +349,129 @@ def member_list_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        member_id = request.POST.get('member_id')
+        member_id = request.POST.get('member_id') # This is nomor_member
         
-        if action == 'delete' and member_id:
-            member = get_object_or_404(Member, nomor_member=member_id)
-            pengguna = member.email
-            member.delete()
-            Pengguna.objects.filter(email=pengguna.email).delete()
-            messages.success(request, 'Member berhasil dihapus.')
-        elif action == 'edit' and member_id:
-            member = get_object_or_404(Member, nomor_member=member_id)
-            pengguna = member.email
-            pengguna.salutation = request.POST.get('salutation')
-            pengguna.first_mid_name = request.POST.get('first_mid_name')
-            pengguna.last_name = request.POST.get('last_name')
-            pengguna.country_code = request.POST.get('country_code')
-            pengguna.mobile_number = request.POST.get('phone_number')
-            pengguna.kewarganegaraan = request.POST.get('nationality')
-            pengguna.tanggal_lahir = request.POST.get('dob')
+        with connection.cursor() as cursor:
+            if action == 'delete' and member_id:
+                # Get email first
+                cursor.execute("SELECT email FROM member WHERE nomor_member = %s", [member_id])
+                row = cursor.fetchone()
+                if row:
+                    email = row[0]
+                    cursor.execute("DELETE FROM member WHERE nomor_member = %s", [member_id])
+                    cursor.execute("DELETE FROM pengguna WHERE email = %s", [email])
+                    messages.success(request, 'Member berhasil dihapus.')
+            
+            elif action == 'edit' and member_id:
+                # Get email
+                cursor.execute("SELECT email FROM member WHERE nomor_member = %s", [member_id])
+                row = cursor.fetchone()
+                if row:
+                    email = row[0]
+                    tier_value = request.POST.get('tier')
+                    cursor.execute("SELECT id_tier FROM tier WHERE nama = %s OR id_tier = %s LIMIT 1", [tier_value, tier_value])
+                    tier_row = cursor.fetchone()
+                    if not tier_row:
+                        messages.error(request, 'Tier tidak valid.')
+                        return redirect('main:member_list')
+                    tier_id = tier_row[0]
 
-            tier_value = request.POST.get('tier')
-            tier = Tier.objects.filter(nama=tier_value).first() or Tier.objects.filter(id_tier=tier_value).first()
-            if not tier:
-                messages.error(request, 'Tier tidak valid.')
-                return redirect('main:member_list')
+                    # Update Pengguna
+                    cursor.execute("""
+                        UPDATE pengguna 
+                        SET salutation = %s, first_mid_name = %s, last_name = %s, 
+                            country_code = %s, mobile_number = %s, kewarganegaraan = %s, 
+                            tanggal_lahir = %s
+                        WHERE email = %s
+                    """, [
+                        request.POST.get('salutation'),
+                        request.POST.get('first_mid_name'),
+                        request.POST.get('last_name'),
+                        request.POST.get('country_code'),
+                        request.POST.get('phone_number'),
+                        request.POST.get('nationality'),
+                        request.POST.get('dob'),
+                        email
+                    ])
+                    # Update Member
+                    cursor.execute("UPDATE member SET id_tier = %s WHERE nomor_member = %s", [tier_id, member_id])
+                    messages.success(request, 'Data member berhasil diperbarui.')
+            
+            elif action == 'create':
+                email = request.POST.get('email')
+                password = request.POST.get('password')
+                
+                cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
+                if cursor.fetchone():
+                    messages.error(request, 'Email sudah terdaftar.')
+                    return redirect('main:member_list')
 
-            member.id_tier = tier
-            pengguna.save()
-            member.save()
-            messages.success(request, 'Data member berhasil diperbarui.')
-        elif action == 'create':
-            email = request.POST.get('email')
-            password = request.POST.get('password')
-            if Pengguna.objects.filter(email=email).exists():
-                messages.error(request, 'Email sudah terdaftar.')
-                return redirect('main:member_list')
+                cursor.execute("SELECT id_tier FROM tier ORDER BY id_tier LIMIT 1")
+                tier_row = cursor.fetchone()
+                if not tier_row:
+                    messages.error(request, 'Tier belum tersedia. Hubungi admin.')
+                    return redirect('main:member_list')
+                tier_id = tier_row[0]
 
-            tier = Tier.objects.order_by('id_tier').first()
-            if not tier:
-                messages.error(request, 'Tier belum tersedia. Hubungi admin.')
-                return redirect('main:member_list')
-
-            pengguna = Pengguna.objects.create(
-                email=email,
-                password=make_password(password),
-                salutation=request.POST.get('salutation'),
-                first_mid_name=request.POST.get('first_mid_name'),
-                last_name=request.POST.get('last_name'),
-                country_code=request.POST.get('country_code'),
-                mobile_number=request.POST.get('phone_number'),
-                kewarganegaraan=request.POST.get('nationality'),
-                tanggal_lahir=request.POST.get('dob'),
-            )
-            Member.objects.create(
-                email=pengguna,
-                nomor_member=_generate_member_number(),
-                tanggal_bergabung=timezone.now().date(),
-                id_tier=tier,
-                award_miles=0,
-                total_miles=0,
-            )
-            messages.success(request, 'Member baru berhasil ditambahkan.')
+                # Create Pengguna
+                cursor.execute("""
+                    INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, kewarganegaraan, tanggal_lahir)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    email,
+                    make_password(password),
+                    request.POST.get('salutation'),
+                    request.POST.get('first_mid_name'),
+                    request.POST.get('last_name'),
+                    request.POST.get('country_code'),
+                    request.POST.get('phone_number'),
+                    request.POST.get('nationality'),
+                    request.POST.get('dob')
+                ])
+                # Create Member
+                cursor.execute("""
+                    INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, [
+                    email,
+                    _generate_member_number(),
+                    timezone.now().date(),
+                    tier_id,
+                    0,
+                    0
+                ])
+                messages.success(request, 'Member baru berhasil ditambahkan.')
         return redirect('main:member_list')
 
-    members_qs = Member.objects.select_related('email', 'id_tier').order_by('-tanggal_bergabung')
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT m.*, p.*, t.nama as tier_nama
+            FROM member m
+            JOIN pengguna p ON m.email = p.email
+            JOIN tier t ON m.id_tier = t.id_tier
+            ORDER BY m.tanggal_bergabung DESC
+        """)
+        rows = dictfetchall(cursor)
+    
     members = []
-    for member in members_qs:
-        pengguna = member.email
+    for row in rows:
+        # Create a structure that mimics what the template expects
         members.append(SimpleNamespace(
-            id=member.nomor_member,
-            member_number=member.nomor_member,
-            full_name=pengguna.full_name,
-            user=SimpleNamespace(email=pengguna.email),
-            tier=member.id_tier.nama if member.id_tier_id else member.id_tier_id,
-            total_miles=member.total_miles or 0,
-            award_miles=member.award_miles or 0,
-            join_date=member.tanggal_bergabung,
-            salutation=pengguna.salutation,
-            first_mid_name=pengguna.first_mid_name,
-            last_name=pengguna.last_name,
-            nationality=pengguna.kewarganegaraan,
-            country_code=pengguna.country_code,
-            phone_number=pengguna.mobile_number,
-            dob=pengguna.tanggal_lahir,
+            id=row['nomor_member'],
+            member_number=row['nomor_member'],
+            full_name=f"{row['salutation']} {row['first_mid_name']} {row['last_name']}",
+            user=SimpleNamespace(email=row['email']),
+            tier=row['tier_nama'],
+            total_miles=row['total_miles'] or 0,
+            award_miles=row['award_miles'] or 0,
+            join_date=row['tanggal_bergabung'],
+            salutation=row['salutation'],
+            first_mid_name=row['first_mid_name'],
+            last_name=row['last_name'],
+            nationality=row['kewarganegaraan'],
+            country_code=row['country_code'],
+            phone_number=row['mobile_number'],
+            dob=row['tanggal_lahir'],
         ))
     context = {
         'role': 'staf',
@@ -380,47 +489,60 @@ def identity_list_view(request):
 
     if request.method == 'POST':
         action = request.POST.get('action')
-        identity_id = request.POST.get('identity_id')
+        identity_id = request.POST.get('identity_id') # This is nomor
         
-        if action == 'delete' and identity_id:
-            identitas = get_object_or_404(Identitas, nomor=identity_id, email_member=member)
-            identitas.delete()
-            messages.success(request, 'Identitas berhasil dihapus.')
-        elif action == 'edit' and identity_id:
-            identitas = get_object_or_404(Identitas, nomor=identity_id, email_member=member)
-            identitas.jenis = request.POST.get('jenis')
-            identitas.negara_penerbit = request.POST.get('negara_penerbit')
-            identitas.tanggal_terbit = request.POST.get('tanggal_terbit')
-            identitas.tanggal_habis = request.POST.get('tanggal_habis')
-            identitas.save()
-            messages.success(request, 'Identitas berhasil diperbarui.')
-        elif action == 'create':
-            no_dok = request.POST.get('no_dokumen')
-            if Identitas.objects.filter(nomor=no_dok).exists():
-                messages.error(request, 'Nomor dokumen sudah terdaftar di sistem.')
-            else:
-                Identitas.objects.create(
-                    email_member=member,
-                    nomor=no_dok,
-                    jenis=request.POST.get('jenis'),
-                    negara_penerbit=request.POST.get('negara_penerbit'),
-                    tanggal_terbit=request.POST.get('tanggal_terbit'),
-                    tanggal_habis=request.POST.get('tanggal_habis'),
-                )
-                messages.success(request, 'Identitas baru berhasil ditambahkan.')
+        with connection.cursor() as cursor:
+            if action == 'delete' and identity_id:
+                cursor.execute("DELETE FROM identitas WHERE nomor = %s AND email_member = %s", [identity_id, member.email.email])
+                messages.success(request, 'Identitas berhasil dihapus.')
+            elif action == 'edit' and identity_id:
+                cursor.execute("""
+                    UPDATE identitas 
+                    SET jenis = %s, negara_penerbit = %s, tanggal_terbit = %s, tanggal_habis = %s
+                    WHERE nomor = %s AND email_member = %s
+                """, [
+                    request.POST.get('jenis'),
+                    request.POST.get('negara_penerbit'),
+                    request.POST.get('tanggal_terbit'),
+                    request.POST.get('tanggal_habis'),
+                    identity_id,
+                    member.email.email
+                ])
+                messages.success(request, 'Identitas berhasil diperbarui.')
+            elif action == 'create':
+                no_dok = request.POST.get('no_dokumen')
+                cursor.execute("SELECT 1 FROM identitas WHERE nomor = %s", [no_dok])
+                if cursor.fetchone():
+                    messages.error(request, 'Nomor dokumen sudah terdaftar di sistem.')
+                else:
+                    cursor.execute("""
+                        INSERT INTO identitas (email_member, nomor, jenis, negara_penerbit, tanggal_terbit, tanggal_habis)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, [
+                        member.email.email,
+                        no_dok,
+                        request.POST.get('jenis'),
+                        request.POST.get('negara_penerbit'),
+                        request.POST.get('tanggal_terbit'),
+                        request.POST.get('tanggal_habis'),
+                    ])
+                    messages.success(request, 'Identitas baru berhasil ditambahkan.')
         return redirect('main:identity_list')
 
-    identities_qs = Identitas.objects.filter(email_member=member)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM identitas WHERE email_member = %s", [member.email.email])
+        rows = dictfetchall(cursor)
+        
     identities = [
         SimpleNamespace(
-            id=ident.nomor,
-            no_dokumen=ident.nomor,
-            jenis=ident.jenis,
-            negara_penerbit=ident.negara_penerbit,
-            tanggal_terbit=ident.tanggal_terbit,
-            tanggal_habis=ident.tanggal_habis,
+            id=row['nomor'],
+            no_dokumen=row['nomor'],
+            jenis=row['jenis'],
+            negara_penerbit=row['negara_penerbit'],
+            tanggal_terbit=row['tanggal_terbit'],
+            tanggal_habis=row['tanggal_habis'],
         )
-        for ident in identities_qs
+        for row in rows
     ]
     context = {
         'role': 'member',
