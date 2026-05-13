@@ -38,7 +38,7 @@
     <select name="penyedia" class="form-select form-select-sm" style="min-width:160px;">
       <option value="">Semua Penyedia</option>
       {% for p in penyedia_list %}
-        <option value="{{ p.id }}" {% if filter_penyedia == p.id|stringformat:"s" %}selected{% endif %}>{{ p.get_nama }}</option>
+        <option value="{{ p.id }}" {% if filter_penyedia == p.id|stringformat:"s" %}selected{% endif %}>{{ p.nama_mitra|default:p.id }}</option>
       {% endfor %}
     </select>
   </div>
@@ -72,8 +72,8 @@
         <td class="fw-medium">{{ h.nama }}</td>
         <td><small class="text-muted">{{ h.deskripsi|truncatechars:40|default:"—" }}</small></td>
         <td>
-          {{ h.id_penyedia.get_nama }}
-          {% if h.id_penyedia.mitra %}
+          {{ h.nama_mitra|default:"Penyedia" }}
+          {% if h.nama_mitra %}
             <span class="badge text-bg-light border text-muted ms-1" style="font-size:.7rem;">partner</span>
           {% else %}
             <span class="badge text-bg-light border text-muted ms-1" style="font-size:.7rem;">airline</span>
@@ -86,13 +86,13 @@
                   data-bs-toggle="modal" data-bs-target="#modalEditHadiah"
                   data-kode="{{ h.kode_hadiah }}"
                   data-nama="{{ h.nama }}"
-                  data-penyedia="{{ h.id_penyedia.id }}"
+                  data-penyedia="{{ h.id_penyedia }}"
                   data-miles="{{ h.miles }}"
                   data-deskripsi="{{ h.deskripsi|default:'' }}"
                   data-valid-start="{{ h.valid_start_date|date:'Y-m-d' }}"
                   data-program-end="{{ h.program_end|date:'Y-m-d' }}"
                   data-url="{% url 'hadiah:hadiah_update' h.kode_hadiah %}">✏️</button>
-          {% if h.is_expired %}
+          {% if today > h.program_end %}
             <button class="btn btn-outline-danger action-btn"
                     data-bs-toggle="modal" data-bs-target="#modalHapusHadiah"
                     data-kode="{{ h.kode_hadiah }}" data-nama="{{ h.nama }}"
@@ -130,7 +130,7 @@
               <select name="id_penyedia" class="form-select form-select-sm" required>
                 <option value="">Pilih penyedia…</option>
                 {% for p in penyedia_list %}
-                  <option value="{{ p.id }}">{{ p.get_nama }}{% if p.mitra %} (partner){% endif %}</option>
+                  <option value="{{ p.id }}">{{ p.nama_mitra|default:p.id }}{% if p.nama_mitra %} (partner){% endif %}</option>
                 {% endfor %}
               </select>
             </div>
@@ -189,7 +189,7 @@
               <select name="id_penyedia" id="editPenyedia" class="form-select form-select-sm" required>
                 <option value="">Pilih penyedia…</option>
                 {% for p in penyedia_list %}
-                  <option value="{{ p.id }}">{{ p.get_nama }}{% if p.mitra %} (partner){% endif %}</option>
+                  <option value="{{ p.id }}">{{ p.nama_mitra|default:p.id }}{% if p.nama_mitra %} (partner){% endif %}</option>
                 {% endfor %}
               </select>
             </div>

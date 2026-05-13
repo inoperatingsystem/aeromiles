@@ -38,7 +38,7 @@
       {% for m in mitra_list %}
       <tr>
         <td>{{ m.email_mitra }}</td>
-        <td><span class="id-badge">#{{ m.id_penyedia.id }}</span></td>
+        <td><span class="id-badge">#{{ m.p_id }}</span></td>
         <td class="fw-medium">{{ m.nama_mitra }}</td>
         <td>{{ m.tanggal_kerja_sama }}</td>
         <td class="text-center">
@@ -46,14 +46,14 @@
                   data-bs-toggle="modal" data-bs-target="#modalEditMitra"
                   data-email="{{ m.email_mitra }}"
                   data-nama="{{ m.nama_mitra }}"
-                  data-penyedia-id="{{ m.id_penyedia.id }}"
+                  data-penyedia-id="{{ m.p_id }}"
                   data-tanggal="{{ m.tanggal_kerja_sama|date:'Y-m-d' }}"
                   data-url="{% url 'mitra:mitra_update' m.email_mitra %}">✏️</button>
           <button class="btn btn-outline-danger action-btn"
                   data-bs-toggle="modal" data-bs-target="#modalHapusMitra"
                   data-email="{{ m.email_mitra }}"
                   data-nama="{{ m.nama_mitra }}"
-                  data-jumlah="{{ m.id_penyedia.hadiah_list.count }}"
+                  data-jumlah="{{ m.hadiah_count }}"
                   data-url="{% url 'mitra:mitra_delete' m.email_mitra %}">🗑️</button>
         </td>
       </tr>
