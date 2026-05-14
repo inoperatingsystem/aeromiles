@@ -1,12 +1,25 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
 from django.db import connection
 
+def staf_required(view_func):
+    """Decorator untuk memastikan user adalah staf yang terautentikasi."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('main:login')
+        if not request.user.is_staf:
+            messages.error(request, "Akses ditolak. Hanya staf yang dapat mengakses halaman ini.")
+            return redirect('main:dashboard')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
 # ── R: Laporan & Riwayat Transaksi (Staf) ─────────────────────────────
+@staf_required
 @require_http_methods(['GET'])
 def laporan_list(request):
-    # TODO: ganti dengan @login_required + pengecekan role staf
     
     # Ambil data member dengan top miles dari database
     top_members = []
@@ -54,10 +67,25 @@ def laporan_list(request):
     # Hitung stats dari member
     total_beredar = sum(m['total_miles'] for m in riwayat)
     total_award = sum(m['award_miles'] for m in riwayat)
+    
+    # Hitung total_redeem dari tabel REDEEM
+    total_redeem = 0
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM aeromiles.redeem")
+        result = cursor.fetchone()
+        total_redeem = result[0] if result else 0
+    
+    # Hitung total_klaim dari tabel CLAIM_MISSING_MILES
+    total_klaim = 0
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) FROM aeromiles.claim_missing_miles")
+        result = cursor.fetchone()
+        total_klaim = result[0] if result else 0
+    
     stats = {
         'total_beredar': f"{total_beredar:,}",
-        'total_redeem': '0',  # TODO: hitung dari tabel REDEEM
-        'total_klaim': '0',   # TODO: hitung dari tabel KLAIM
+        'total_redeem': str(total_redeem),
+        'total_klaim': str(total_klaim),
     }
     
     return render(request, 'laporan/index.html', {

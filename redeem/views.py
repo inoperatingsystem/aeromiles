@@ -1,82 +1,78 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db import connection
+from django.db import connection, DatabaseError
 from hadiah.models import Hadiah
 
 # ── R: Katalog Hadiah & Riwayat Redeem (Member) ─────────────────────────────
+@login_required(login_url='main:login')
 @require_http_methods(['GET'])
 def member_redeem_list(request):
-    # TODO: ganti dengan @login_required setelah auth jalan
-    today = timezone.now().date()
-    
-    # Ambil hadiah aktif dari database
-    katalog = Hadiah.objects.filter(valid_start_date__lte=today, program_end__gte=today).select_related('id_penyedia')
-    
-    # Gunakan session untuk menyimpan riwayat redeem sementara
-    if 'riwayat_redeem' not in request.session:
-        request.session['riwayat_redeem'] = []
-    
-    riwayat = request.session['riwayat_redeem']
-    
-    # Ambil award miles member dari database
+    katalog = Hadiah.objects.all().select_related('id_penyedia')
+
     with connection.cursor() as cursor:
-        cursor.execute('SELECT award_miles FROM aeromiles.member WHERE email = %s', ['member1@gmail.com'])
+        cursor.execute('''
+            SELECT
+                r.timestamp,
+                h.nama as nama_hadiah,
+                h.miles,
+                h.kode_hadiah
+            FROM aeromiles.redeem r
+            JOIN aeromiles.hadiah h ON r.kode_hadiah = h.kode_hadiah
+            WHERE r.email_member = %s
+            ORDER BY r.timestamp DESC
+        ''', [request.user.email])
+
+        columns = [col[0] for col in cursor.description]
+        riwayat = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        for item in riwayat:
+            item['waktu'] = item['timestamp'].strftime("%Y-%m-%d %H:%M")
+
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT award_miles FROM aeromiles.member WHERE email = %s', [request.user.email])
         result = cursor.fetchone()
         award_miles = result[0] if result else 0
-    
+
     return render(request, 'redeem/member_redeem.html', {
         'katalog': katalog,
-        'riwayat': reversed(riwayat),
+        'riwayat': riwayat,
         'award_miles': f"{award_miles:,}",
     })
 
 # ── C: Redeem Hadiah (Member) ────────────────────────────────────────────────
+@login_required(login_url='main:login')
 @require_http_methods(['POST'])
 def member_redeem_create(request, kode_hadiah):
-    hadiah = Hadiah.objects.get(kode_hadiah=kode_hadiah) if Hadiah.objects.filter(kode_hadiah=kode_hadiah).exists() else None
-    if not hadiah:
-        messages.error(request, "Hadiah tidak ditemukan.")
-        return redirect('redeem:member_redeem_list')
-    
-    today = timezone.now().date()
-    
-    # Validasi 1: Hadiah masih valid?
-    if today < hadiah.valid_start_date or today > hadiah.program_end:
-        messages.error(request, f"Hadiah '{hadiah.nama}' sedang tidak berlaku.")
-        return redirect('redeem:member_redeem_list')
-    
-    # Ambil award miles member dari database
-    with connection.cursor() as cursor:
-        cursor.execute('SELECT award_miles FROM aeromiles.member WHERE email = %s', ['member1@gmail.com'])
-        result = cursor.fetchone()
-        award_miles_member = result[0] if result else 0
-    
-    # Validasi 2: Award miles cukup?
-    if award_miles_member < hadiah.miles:
-        messages.error(request, f"Award miles Anda tidak mencukupi untuk redeem '{hadiah.nama}'.")
-        return redirect('redeem:member_redeem_list')
-    
-    # Update award miles member di database
-    new_award_miles = award_miles_member - hadiah.miles
-    with connection.cursor() as cursor:
-        cursor.execute('UPDATE aeromiles.member SET award_miles = %s WHERE email = %s', [new_award_miles, 'member1@gmail.com'])
-    
-    # Simpan ke session untuk dummy UI
-    riwayat = request.session.get('riwayat_redeem', [])
-    waktu_sekarang = timezone.now().strftime("%Y-%m-%d %H:%M")
-    
-    transaksi = {
-        'nama_hadiah': hadiah.nama,
-        'kode_hadiah': hadiah.kode_hadiah,
-        'waktu': waktu_sekarang,
-        'miles': hadiah.miles,
-    }
-    
-    riwayat.append(transaksi)
-    request.session['riwayat_redeem'] = riwayat
-    request.session.modified = True
-    
-    messages.success(request, f"Berhasil melakukan redeem '{hadiah.nama}'. Miles terpotong {hadiah.miles:,}.")
+    email_member = request.user.email
+    waktu_sekarang = timezone.now()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT nama, miles FROM aeromiles.hadiah WHERE kode_hadiah = %s', [kode_hadiah])
+            hadiah_result = cursor.fetchone()
+
+            if not hadiah_result:
+                messages.error(request, "Hadiah tidak ditemukan.")
+                return redirect('redeem:member_redeem_list')
+
+            nama_hadiah, miles = hadiah_result
+
+            cursor.execute(
+                '''
+                INSERT INTO aeromiles.redeem (email_member, kode_hadiah, timestamp)
+                VALUES (%s, %s, %s)
+                ''',
+                [email_member, kode_hadiah, waktu_sekarang]
+            )
+
+        success_msg = f'SUKSES: Redeem hadiah "{nama_hadiah}" berhasil. Award miles Anda berkurang {miles} miles.'
+        messages.success(request, success_msg)
+
+    except DatabaseError as e:
+        error_msg = str(e).split('\n')[0].replace('ERROR:  ', '').strip()
+        messages.error(request, error_msg)
+
     return redirect('redeem:member_redeem_list')
