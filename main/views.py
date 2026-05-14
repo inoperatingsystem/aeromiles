@@ -9,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 from django.db import connection
+from django.db import DatabaseError
 from .models import Pengguna, Member, Staf
 from .forms import RegisterForm, ProfileForm
 from .utils import dictfetchall, dictfetchone
@@ -147,64 +148,69 @@ def register_view(request):
                     'oziskies.com': 'OZ',
                     'sakuraairways.com': 'SA'
                 }
-                
+
                 if domain not in domain_to_maskapai:
                     messages.error(request, f'Email staf harus menggunakan domain resmi ({", ".join(domain_to_maskapai.keys())}).')
                     return redirect('main:register')
-                
+
                 maskapai_code = domain_to_maskapai[domain]
 
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
-                if cursor.fetchone():
-                    messages.error(request, 'Email sudah terdaftar.')
-                    return redirect('main:register')
-
-                tier_id = None
-                if role == 'member':
-                    cursor.execute("SELECT id_tier FROM tier ORDER BY id_tier LIMIT 1")
-                    row = cursor.fetchone()
-                    if not row:
-                        messages.error(request, 'Tier belum tersedia. Hubungi admin untuk menambahkan data tier.')
-                        return redirect('main:register')
-                    tier_id = row[0]
-
-                cursor.execute("""
-                    INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, [
-                    email,
-                    make_password(password),
-                    data.get('salutation'),
-                    data.get('first_mid_name'),
-                    data.get('last_name'),
-                    data.get('country_code'),
-                    data.get('phone_number'),
-                    data.get('dob'),
-                    data.get('nationality')
-                ])
-
-                if role == 'member':
+            try:
+                with connection.cursor() as cursor:
                     cursor.execute("""
-                        INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
-                        VALUES (%s, %s, %s, %s, %s, %s)
+                        CALL aeromiles.sp_register_pengguna(%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, [
                         email,
-                        _generate_member_number(),
-                        timezone.now().date(),
-                        tier_id,
-                        0,
-                        0
+                        make_password(password),
+                        data.get('salutation'),
+                        data.get('first_mid_name'),
+                        data.get('last_name'),
+                        data.get('country_code'),
+                        data.get('phone_number'),
+                        data.get('dob'),
+                        data.get('nationality')
                     ])
+
+                    tier_id = None
+                    if role == 'member':
+                        cursor.execute("SELECT id_tier FROM tier ORDER BY id_tier LIMIT 1")
+                        row = cursor.fetchone()
+                        if not row:
+                            messages.error(request, 'Tier belum tersedia. Hubungi admin untuk menambahkan data tier.')
+                            return redirect('main:register')
+                        tier_id = row[0]
+
+                    if role == 'member':
+                        cursor.execute("""
+                            INSERT INTO member (email, nomor_member, tanggal_bergabung, id_tier, award_miles, total_miles)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """, [
+                            email,
+                            _generate_member_number(),
+                            timezone.now().date(),
+                            tier_id,
+                            0,
+                            0
+                        ])
+                    else:
+                        cursor.execute("""
+                            INSERT INTO staf (email, id_staf, kode_maskapai)
+                            VALUES (%s, %s, %s)
+                        """, [
+                            email,
+                            _generate_staf_id(),
+                            maskapai_code
+                        ])
+
+            except DatabaseError as e:
+                raw_msg = str(e)
+                first_line = raw_msg.split('\n')[0].strip()
+                if first_line.upper().startswith('ERROR:'):
+                    clean_msg = first_line[first_line.index('ERROR:'):].strip()
                 else:
-                    cursor.execute("""
-                        INSERT INTO staf (email, id_staf, kode_maskapai)
-                        VALUES (%s, %s, %s)
-                    """, [
-                        email,
-                        _generate_staf_id(),
-                        maskapai_code
-                    ])
+                    clean_msg = first_line
+                messages.error(request, clean_msg)
+                return redirect('main:register')
 
             messages.success(request, 'Registrasi berhasil. Silakan login.')
             return redirect('main:login')
@@ -214,11 +220,11 @@ def register_view(request):
                     messages.error(request, f"{field}: {error}")
     else:
         form = RegisterForm()
-    
+
     with connection.cursor() as cursor:
         cursor.execute("SELECT kode_maskapai, nama_maskapai FROM maskapai ORDER BY nama_maskapai")
         maskapai_list = dictfetchall(cursor)
-        
+
     return render(request, 'register.html', {
         'form': form,
         'maskapai_list': maskapai_list

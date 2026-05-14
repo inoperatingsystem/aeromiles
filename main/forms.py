@@ -26,14 +26,9 @@ class RegisterForm(forms.Form):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
         confirm_password = cleaned_data.get('confirm_password')
-        email = cleaned_data.get('email')
-        role = cleaned_data.get('role')
 
         if password and confirm_password and password != confirm_password:
             self.add_error('confirm_password', 'Password dan konfirmasi password tidak cocok.')
-
-        if email and Pengguna.objects.filter(email=email).exists():
-            self.add_error('email', 'Email sudah terdaftar.')
 
         return cleaned_data
 
