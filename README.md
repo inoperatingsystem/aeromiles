@@ -2,15 +2,17 @@
 
 **Aeromiles** is a Django-based web application developed as a group project for the Database Course (Mata Kuliah Basis Data).
 
-This project simulates a comprehensive airline loyalty miles management system. It is specifically designed to work with a custom, pre-defined PostgreSQL database schema, integrating features like custom authentication, membership tiers, points management (claim, redeem, transfer), and reward catalogs with partners.  
+This project simulates a comprehensive airline loyalty miles management system. It is specifically designed to work with a custom, pre-defined PostgreSQL database schema, integrating features like custom authentication, membership tiers, points management (claim, redeem, transfer), and reward catalogs with partners.
+
+**Key Feature:** All database interactions are implemented using **Raw SQL (parameterized queries)** without relying on Django ORM (`.objects`), ensuring full compliance with course requirements for manual query management.
 
 ## Group 7: Komunitas Pencinta Warna Biru
 
-| Name | NPM |
-| :--- | :--- |
-| Julius Albert Wirayuda| 2406425792 |
-| Amadio Juno Trisanto | 2406496416 |
-| Salsabila Salimah | 2406432734 |
+| Name                     | NPM        |
+| :----------------------- | :--------- |
+| Julius Albert Wirayuda   | 2406425792 |
+| Amadio Juno Trisanto     | 2406496416 |
+| Salsabila Salimah        | 2406432734 |
 | Aryandana Pascua Patiung | 2406438214 |
 
 ## Prerequisites
@@ -49,7 +51,7 @@ docker-compose up --build -d
 
 ### 4. Database Setup (Crucial Step)
 
-Since this project relies on a custom database schema (`AEROMILES`), you **must** import the SQL files into the PostgreSQL container before running Django migrations.
+Since this project relies on a custom database schema (`AEROMILES`), you **must** import the SQL files into the PostgreSQL container.
 
 First, import the main schema structure:
 
@@ -63,12 +65,6 @@ Second, populate the database with dummy data:
 cat dummy.sql | docker-compose exec -T db psql -U <your_username> -d <your_database_name>
 ```
 
-Finally, apply Django's built-in migrations (this handles internal tables like user sessions):
-
-```bash
-docker-compose exec web python manage.py migrate
-```
-
 ### 5. Access the Project
 
 The application should now be available at `http://localhost:8000`.
@@ -76,11 +72,23 @@ The application should now be available at `http://localhost:8000`.
 To test the login functionality, you can use any of the pre-inserted dummy accounts. For example:
 
 - **Login as Member:**
-  - Email: `user1@mail.com`
+  - Email: `member1@gmail.com`
   - Password: `hashedpw1`
 - **Login as Staf:**
-  - Email: `user51@mail.com`
+  - Email: `staf1@nusantaraair.com`
   - Password: `hashedpw51`
+
+### Staff Registration
+
+To register as a **Staf**, you must use an email address with one of the following official airline domains:
+
+- `@nusantaraair.com`
+- `@lionsky.com`
+- `@bumiairlines.com`
+- `@oziskies.com`
+- `@sakuraairways.com`
+
+Any other domain will can only register as a **Member**.
 
 ## Useful Docker Commands
 
@@ -127,7 +135,7 @@ To test the login functionality, you can use any of the pre-inserted dummy accou
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py
-├── main/                   # Django app  
+├── main/                   # Django app
 ├── ...
 ├── dummy.sql               # Dummy data for the db
 └── dumpsql.sql             # SQL schema for the db
