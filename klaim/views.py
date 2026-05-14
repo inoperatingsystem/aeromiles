@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from main.models import Bandara, Maskapai, Member, Staf
 from .models import Klaim, MASKAPAI_CHOICES, BANDARA_CHOICES, KELAS_CHOICES
+from django.db import connection
 
 
 def _context_base():
@@ -276,8 +277,19 @@ def staf_klaim_action(request, no_klaim):
         klaim.status_penerimaan = 'Disetujui'
         if staf:
             klaim.email_staf = staf
+        # Bersihkan notices lama
+        if hasattr(connection.connection, 'notices'):
+            del connection.connection.notices[:]
+
         klaim.save()
-        messages.success(request, f'Klaim {no_klaim} berhasil disetujui.')
+
+        # Tampilkan pesan dari Trigger (jika ada)
+        if hasattr(connection.connection, 'notices') and connection.connection.notices:
+            for notice in connection.connection.notices:
+                clean_notice = notice.replace('NOTICE:  ', '').strip()
+                messages.success(request, clean_notice)
+        else:
+            messages.success(request, f'Klaim {no_klaim} berhasil disetujui.')
     elif action == 'tolak':
         klaim.status_penerimaan = 'Ditolak'
         if staf:

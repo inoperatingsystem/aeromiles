@@ -2,6 +2,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 import uuid
+from django.db import connection
+from main.utils import dictfetchall
 
 # DUMMY DATA untuk Laporan & Riwayat (Karena belum ada model gabungan/logs)
 INITIAL_TRANSACTIONS = [
@@ -61,29 +63,7 @@ INITIAL_TRANSACTIONS = [
     },
 ]
 
-TOP_MEMBERS = [
-    {
-        'rank': 1,
-        'member_name': 'John W. Doe',
-        'member_email': 'john@example.com',
-        'total_miles': '18,000',
-        'jumlah_transaksi': 3,
-    },
-    {
-        'rank': 2,
-        'member_name': 'Jane Smith',
-        'member_email': 'jane@example.com',
-        'total_miles': '5,000',
-        'jumlah_transaksi': 1,
-    },
-    {
-        'rank': 3,
-        'member_name': 'Budi A. Santoso',
-        'member_email': 'budi@example.com',
-        'total_miles': '4,500',
-        'jumlah_transaksi': 2,
-    },
-]
+# TOP_MEMBERS di-fetch dinamis dari database
 
 # ── R: Laporan & Riwayat Transaksi (Staf) ─────────────────────────────
 @require_http_methods(['GET'])
@@ -108,9 +88,36 @@ def laporan_list(request):
         'total_klaim': '2,500',
     }
     
+    # Ambil Top 5 Members dari Stored Procedure
+    top_members_db = []
+    with connection.cursor() as cursor:
+        if hasattr(connection.connection, 'notices'):
+            del connection.connection.notices[:]
+            
+        cursor.execute("SELECT * FROM aeromiles.get_top_5_member()")
+        rows = dictfetchall(cursor)
+        
+        # Tampilkan pesan dari Stored Procedure
+        if hasattr(connection.connection, 'notices') and connection.connection.notices:
+            for notice in connection.connection.notices:
+                clean_notice = notice.replace('NOTICE:  ', '').strip()
+                # Hindari pesan duplikat jika view dirender berulang kali
+                if clean_notice not in [m.message for m in messages.get_messages(request)]:
+                    messages.success(request, clean_notice)
+
+        # Ubah format hasil query agar sesuai dengan template laporan
+        for index, row in enumerate(rows):
+            top_members_db.append({
+                'rank': index + 1,
+                'member_name': row['email'], # fallback ke email jika nama tidak diambil di SP
+                'member_email': row['email'],
+                'total_miles': f"{row['total_miles']:,}",
+                'jumlah_transaksi': '-', # Karena SP tidak menghitung jumlah transaksi
+            })
+
     return render(request, 'laporan/index.html', {
         'riwayat': riwayat,
-        'top_members': TOP_MEMBERS,
+        'top_members': top_members_db,
         'stats': stats,
         'tipe_filter': tipe_filter,
     })
