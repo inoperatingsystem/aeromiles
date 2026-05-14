@@ -265,10 +265,33 @@ def dashboard_view(request):
             'award_miles': member.award_miles or 0,
             'tanggal_bergabung': member.tanggal_bergabung,
         })
+
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT * FROM (
+                    SELECT 'Transfer' as tipe, timestamp, jumlah as miles FROM transfer WHERE email_member_1 = %s
+                    UNION ALL
+                    SELECT 'Redeem' as tipe, r.timestamp, h.miles as miles FROM redeem r JOIN hadiah h ON r.kode_hadiah = h.kode_hadiah WHERE r.email_member = %s
+                    UNION ALL
+                    SELECT 'Package' as tipe, amp.timestamp, a.jumlah_award_miles as miles FROM member_award_miles_package amp JOIN award_miles_package a ON amp.id_award_miles_package = a.id WHERE amp.email_member = %s
+                    UNION ALL
+                    SELECT 'Klaim' as tipe, timestamp, 0 as miles FROM claim_missing_miles WHERE email_member = %s
+                ) AS combined ORDER BY timestamp DESC LIMIT 5
+            """, [pengguna.email, pengguna.email, pengguna.email, pengguna.email])
+            columns = [col[0] for col in cursor.description]
+            context['recent_transactions'] = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
     elif role == 'staf' and staf:
+        nama_maskapai = staf.kode_maskapai_id
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT nama_maskapai FROM maskapai WHERE kode_maskapai = %s", [staf.kode_maskapai_id])
+            row = cursor.fetchone()
+            if row:
+                nama_maskapai = row[0]
+
         context.update({
             'id_staf': staf.id_staf,
-            'maskapai': staf.kode_maskapai_id,
+            'maskapai': nama_maskapai, # Variabel ini otomatis mengisi {{ maskapai }} di HTML dengan Nama (bukan Kode)
             'klaim_menunggu': 0,
             'klaim_disetujui': 0,
             'klaim_ditolak': 0,
