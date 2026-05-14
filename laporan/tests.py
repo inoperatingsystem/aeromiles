@@ -1,8 +1,5 @@
-import django
 from django.test import RequestFactory, SimpleTestCase
 from unittest.mock import patch
-
-django.setup()
 
 from . import views
 
