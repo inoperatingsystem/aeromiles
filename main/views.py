@@ -1,7 +1,7 @@
 import random
 from types import SimpleNamespace
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib import messages
@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 from django.db import connection
-from .models import Pengguna, Member, Staf, Identitas, Tier, Maskapai
+from .models import Pengguna, Member, Staf
 from .forms import RegisterForm, ProfileForm
 from .utils import dictfetchall, dictfetchone
 
@@ -38,7 +38,6 @@ def _get_member(request):
         """, [pengguna.email])
         row = dictfetchone(cursor)
         if row:
-            # Rename FK fields to use _id suffix for Django model compatibility
             data = {k: v for k, v in row.items() if k != 'tier_nama'}
             if 'email' in data: data['email_id'] = data.pop('email')
             if 'id_tier' in data: data['id_tier_id'] = data.pop('id_tier')
@@ -119,6 +118,19 @@ def register_view(request):
             role = data.get('role')
             email = data.get('email')
             password = data.get('password')
+
+            if role == 'staf':
+                domain = email.split('@')[-1]
+                allowed_domains = [
+                    'nusantaraair.com',
+                    'lionsky.com',
+                    'bumiairlines.com',
+                    'oziskies.com',
+                    'sakuraairways.com'
+                ]
+                if domain not in allowed_domains:
+                    messages.error(request, f'Email staf harus menggunakan domain resmi ({", ".join(allowed_domains)}).')
+                    return redirect('main:register')
 
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
