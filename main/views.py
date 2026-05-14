@@ -230,10 +230,23 @@ def dashboard_view(request):
         messages.error(request, 'Data pengguna tidak ditemukan. Silakan login ulang.')
         return redirect('main:login')
 
-    member = _get_member(request)
-    staf = _get_staf(request)
+    role = request.session.get('user_role')
+    
+    if not role:
+        member = _get_member(request)
+        staf = _get_staf(request)
+        role = 'member' if member else 'staf' if staf else 'guest'
+    else:
+        member = _get_member(request) if role == 'member' else None
+        staf = _get_staf(request) if role == 'staf' else None
+        
+        if role == 'member' and not member:
+            messages.error(request, 'Profil member tidak ditemukan.')
+            return redirect('main:login')
+        if role == 'staf' and not staf:
+            messages.error(request, 'Profil staf tidak ditemukan.')
+            return redirect('main:login')
 
-    role = 'member' if member else 'staf' if staf else 'guest'
     context = {
         'role': role,
         'nama_lengkap': pengguna.full_name,
