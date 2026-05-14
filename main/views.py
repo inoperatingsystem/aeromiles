@@ -8,8 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
-from django.db import connection
-from django.db import DatabaseError
+from django.db import connection, DatabaseError
 from .models import Pengguna, Member, Staf
 from .forms import RegisterForm, ProfileForm
 from .utils import dictfetchall, dictfetchone
@@ -96,7 +95,14 @@ def login_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
         password = request.POST.get('password')
-        user = authenticate(request, username=email, password=password)
+        try:
+            user = authenticate(request, username=email, password=password)
+        except DatabaseError as e:
+            raw_msg = str(e).split('\n')[0].strip()
+
+            clean_msg = raw_msg.split('ERROR:  ')[-1] if 'ERROR:  ' in raw_msg else raw_msg
+            messages.error(request, clean_msg)
+            return render(request, 'login.html')
         
         if user is not None:
             domain = email.split('@')[-1]
@@ -120,7 +126,7 @@ def login_view(request):
             request.session['user_role'] = role_target
             return redirect('main:dashboard')
         else:
-            messages.error(request, 'Email atau password salah.')
+            messages.error(request, 'Email atau password salah, silakan coba lagi.')
     return render(request, 'login.html')
 
 def logout_view(request):
