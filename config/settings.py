@@ -111,7 +111,6 @@ DATABASES = {
 
 AUTHENTICATION_BACKENDS = [
     'main.backends.PenggunaAuthBackend',
-    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Password validation

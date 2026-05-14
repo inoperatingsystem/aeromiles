@@ -11,9 +11,7 @@ class PenggunaAuthBackend(BaseBackend):
             row = dictfetchone(cursor)
             
             if row:
-                # Create a Pengguna object from the dict (to keep compatibility with Django auth)
                 pengguna = Pengguna(**row)
-                # Support both hashed passwords (from our app) and plaintext passwords (from TA's SQL dummy data)
                 if check_password(password, pengguna.password) or pengguna.password == password:
                     return pengguna
         return None
