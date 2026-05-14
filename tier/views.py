@@ -1,92 +1,70 @@
 from django.shortcuts import render
 from django.views.decorators.http import require_http_methods
+from django.db import connection
 
-# DUMMY DATA untuk tabel TIER (menunggu inspectdb)
-DUMMY_TIERS = [
-    {
-        'id_tier': 'T-001',
-        'nama': 'Blue',
-        'minimal_frekuensi_terbang': 0,
-        'minimal_tier_miles': 0,
-        'minimal_tier_miles_str': '0',
-        'keuntungan': [
-            'Akumulasi miles dasar',
-            'Akses penawaran khusus member'
-        ],
-        'color': '#0dcaf0', # info
-        'bg_color': '#f8f9fa'
-    },
-    {
-        'id_tier': 'T-002',
-        'nama': 'Silver',
-        'minimal_frekuensi_terbang': 10,
-        'minimal_tier_miles': 15000,
-        'minimal_tier_miles_str': '15,000',
-        'keuntungan': [
-            'Bonus miles 25%',
-            'Priority check-in',
-            'Akses lounge partner'
-        ],
-        'color': '#adb5bd', # secondary
-        'bg_color': '#f8f9fa'
-    },
-    {
-        'id_tier': 'T-003',
-        'nama': 'Gold',
-        'minimal_frekuensi_terbang': 25,
-        'minimal_tier_miles': 40000,
-        'minimal_tier_miles_str': '40,000',
-        'keuntungan': [
-            'Bonus miles 50%',
-            'Priority boarding',
-            'Akses lounge premium',
-            'Extra bagasi 10kg'
-        ],
-        'color': '#ffc107', # warning
-        'bg_color': '#fffdf5' # slightly yellow bg for highlight
-    },
-    {
-        'id_tier': 'T-004',
-        'nama': 'Platinum',
-        'minimal_frekuensi_terbang': 50,
-        'minimal_tier_miles': 80000,
-        'minimal_tier_miles_str': '80,000',
-        'keuntungan': [
-            'Bonus miles 100%',
-            'Upgrade gratis (subject to availability)',
-            'Akses lounge first class',
-            'Extra bagasi 20kg',
-            'Dedicated hotline'
-        ],
-        'color': '#212529', # dark
-        'bg_color': '#f8f9fa'
-    },
-]
+TIER_BENEFITS = {
+    'T1': {'keuntungan': ['Akumulasi miles dasar', 'Akses penawaran khusus member'], 'color': '#0dcaf0', 'bg_color': '#f8f9fa'},
+    'T2': {'keuntungan': ['Bonus miles 25%', 'Priority check-in', 'Akses lounge partner'], 'color': '#adb5bd', 'bg_color': '#f8f9fa'},
+    'T3': {'keuntungan': ['Bonus miles 50%', 'Priority boarding', 'Akses lounge premium', 'Extra bagasi 10kg'], 'color': '#ffc107', 'bg_color': '#fffdf5'},
+    'T4': {'keuntungan': ['Bonus miles 100%', 'Upgrade gratis (subject to availability)', 'Akses lounge first class', 'Extra bagasi 20kg', 'Dedicated hotline'], 'color': '#212529', 'bg_color': '#f8f9fa'},
+}
 
 # ── R: Informasi Tier (Member) ─────────────────────────────
 @require_http_methods(['GET'])
 def member_tier_info(request):
-    # TODO: Ambil dari request.user.userprofile setelah auth aktif
+    # Ambil data tier dari database
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT id_tier, nama, minimal_frekuensi_terbang, minimal_tier_miles FROM aeromiles.tier ORDER BY minimal_tier_miles ASC')
+        columns = [col[0] for col in cursor.description]
+        tiers_raw = [dict(zip(columns, row)) for row in cursor.fetchall()]
     
-    # Dummy current status for testing UI
-    current_tier_nama = 'Gold'
-    current_tier_miles = 45000
+    # Format tier dengan benefits
+    tiers = []
+    for tier in tiers_raw:
+        tier_id = tier['id_tier']
+        tier_data = {
+            'id_tier': tier_id,
+            'nama': tier['nama'],
+            'minimal_frekuensi_terbang': tier['minimal_frekuensi_terbang'],
+            'minimal_tier_miles': tier['minimal_tier_miles'],
+            'minimal_tier_miles_str': f"{tier['minimal_tier_miles']:,}",
+            **TIER_BENEFITS.get(tier_id, {'keuntungan': [], 'color': '#000000', 'bg_color': '#f8f9fa'})
+        }
+        tiers.append(tier_data)
     
-    # Calculate progress
+    # Ambil tier member saat ini
+    member_tier_data = None
+    with connection.cursor() as cursor:
+        cursor.execute(
+            'SELECT m.id_tier, t.nama, m.award_miles FROM aeromiles.member m JOIN aeromiles.tier t ON m.id_tier = t.id_tier WHERE m.email = %s',
+            ['member1@gmail.com']
+        )
+        result = cursor.fetchone()
+        if result:
+            columns = [col[0] for col in cursor.description]
+            member_tier_data = dict(zip(columns, result))
+    
+    if member_tier_data:
+        current_tier_nama = member_tier_data['nama']
+        current_tier_miles = member_tier_data['award_miles']
+    else:
+        current_tier_nama = 'Blue'
+        current_tier_miles = 0
+    
+    # Hitung progress ke tier berikutnya
     next_tier = None
-    for t in DUMMY_TIERS:
+    for t in tiers:
         if t['minimal_tier_miles'] > current_tier_miles:
             next_tier = t
             break
-            
-    # Calculate percentage for progress bar
+    
     if next_tier:
         progress_percentage = min(100, int((current_tier_miles / next_tier['minimal_tier_miles']) * 100))
     else:
         progress_percentage = 100
-        
+    
     return render(request, 'tier/info.html', {
-        'tiers': DUMMY_TIERS,
+        'tiers': tiers,
         'current_tier_nama': current_tier_nama,
         'current_tier_miles': f"{current_tier_miles:,}",
         'next_tier': next_tier,
