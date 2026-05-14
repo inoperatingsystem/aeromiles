@@ -96,8 +96,27 @@ def login_view(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         user = authenticate(request, username=email, password=password)
+        
         if user is not None:
+            domain = email.split('@')[-1]
+            allowed_staff_domains = [
+                'nusantaraair.com',
+                'lionsky.com',
+                'bumiairlines.com',
+                'oziskies.com',
+                'sakuraairways.com'
+            ]
+            
+            role_target = 'staf' if domain in allowed_staff_domains else 'member'
+            
+            with connection.cursor() as cursor:
+                cursor.execute(f"SELECT 1 FROM {role_target} WHERE email = %s", [email])
+                if not cursor.fetchone():
+                    messages.error(request, f"Login gagal. Email Anda menggunakan domain {role_target}, tetapi tidak terdaftar di sistem {role_target}.")
+                    return render(request, 'login.html')
+
             login(request, user)
+            request.session['user_role'] = role_target
             return redirect('main:dashboard')
         else:
             messages.error(request, 'Email atau password salah.')
