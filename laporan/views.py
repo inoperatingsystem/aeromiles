@@ -63,14 +63,14 @@ INITIAL_TRANSACTIONS = [
 ]
 
 
-def _is_approved_missing_miles(transaksi):
+def _is_approved_claim(transaksi):
     return transaksi.get('tipe') == 'Klaim' and transaksi.get('status') == 'Disetujui'
 
 
 def _can_delete_transaction(transaksi):
     if 'can_delete' in transaksi:
         return transaksi['can_delete']
-    return not _is_approved_missing_miles(transaksi)
+    return not _is_approved_claim(transaksi)
 
 
 def _prepare_riwayat(riwayat):
@@ -84,7 +84,7 @@ def _prepare_riwayat(riwayat):
 
 
 def _delete_error_message(transaksi):
-    if _is_approved_missing_miles(transaksi):
+    if _is_approved_claim(transaksi):
         return 'Riwayat Klaim Missing Miles yang sudah Disetujui tidak dapat dihapus.'
     return 'Riwayat ini tidak dapat dihapus.'
 
@@ -150,7 +150,7 @@ def laporan_delete(request, transaksi_id):
 
     if transaksi:
         if not _can_delete_transaction(transaksi):
-            messages.error(request, _delete_error_message(transaksi))
+            messages.error(request, transaksi.get('delete_disabled_reason') or _delete_error_message(transaksi))
         else:
             request.session['riwayat_staf'] = [r for r in riwayat if r['id'] != str(transaksi_id)]
             request.session.modified = True
