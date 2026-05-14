@@ -51,7 +51,7 @@ class LaporanDeleteTests(SimpleTestCase):
         self.assertIn('Penghapusan riwayat transaksi bersifat permanen', content)
         self.assertIn('Riwayat yang dihapus juga tidak lagi tampil untuk Member.', content)
         self.assertIn('Riwayat Klaim Missing Miles yang sudah Disetujui tidak dapat dihapus.', content)
-        self.assertIn('title="Riwayat Klaim Missing Miles yang sudah Disetujui tidak dapat dihapus"', content)
+        self.assertIn('title="Riwayat Klaim Missing Miles yang sudah Disetujui tidak dapat dihapus."', content)
 
     def test_delete_removes_deletable_transaction(self):
         session = DummySession(

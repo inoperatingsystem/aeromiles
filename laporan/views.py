@@ -78,6 +78,7 @@ def _prepare_riwayat(riwayat):
     for transaksi in riwayat:
         item = dict(transaksi)
         item['can_delete'] = _can_delete_transaction(item)
+        item['delete_disabled_reason'] = _delete_error_message(item) if not item['can_delete'] else ''
         prepared.append(item)
     return prepared
 
