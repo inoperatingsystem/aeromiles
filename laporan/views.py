@@ -39,7 +39,8 @@ INITIAL_TRANSACTIONS = [
         'member_email': 'budi@example.com',
         'miles': 2500,
         'waktu': '2025-02-05 11:45',
-        'can_delete': False, # Klaim yang disetujui tidak dapat dihapus
+        'status': 'Disetujui',
+        'can_delete': False,  # Klaim yang disetujui tidak dapat dihapus
     },
     {
         'id': str(uuid.uuid4()),
@@ -60,6 +61,31 @@ INITIAL_TRANSACTIONS = [
         'can_delete': True,
     },
 ]
+
+
+def _is_approved_missing_miles(transaksi):
+    return transaksi.get('tipe') == 'Klaim' and transaksi.get('status') == 'Disetujui'
+
+
+def _can_delete_transaction(transaksi):
+    if 'can_delete' in transaksi:
+        return transaksi['can_delete']
+    return not _is_approved_missing_miles(transaksi)
+
+
+def _prepare_riwayat(riwayat):
+    prepared = []
+    for transaksi in riwayat:
+        item = dict(transaksi)
+        item['can_delete'] = _can_delete_transaction(item)
+        prepared.append(item)
+    return prepared
+
+
+def _delete_error_message(transaksi):
+    if _is_approved_missing_miles(transaksi):
+        return 'Riwayat Klaim Missing Miles yang sudah Disetujui tidak dapat dihapus.'
+    return 'Riwayat ini tidak dapat dihapus.'
 
 TOP_MEMBERS = [
     {
@@ -93,8 +119,8 @@ def laporan_list(request):
     # Ambil transaksi dari session untuk dummy hapus-hapus
     if 'riwayat_staf' not in request.session:
         request.session['riwayat_staf'] = INITIAL_TRANSACTIONS
-        
-    riwayat = request.session['riwayat_staf']
+
+    riwayat = _prepare_riwayat(request.session['riwayat_staf'])
     
     # Filter
     tipe_filter = request.GET.get('tipe', '')
@@ -118,21 +144,20 @@ def laporan_list(request):
 # ── D: Hapus Riwayat (Staf) ────────────────────────────────────────────────
 @require_http_methods(['POST'])
 def laporan_delete(request, transaksi_id):
-    if 'riwayat_staf' in request.session:
-        riwayat = request.session['riwayat_staf']
-        
-        # Cari transaksi
-        transaksi = next((r for r in riwayat if r['id'] == str(transaksi_id)), None)
-        
-        if transaksi:
-            if not transaksi['can_delete']:
-                messages.error(request, "Riwayat ini tidak dapat dihapus.")
-            else:
-                riwayat = [r for r in riwayat if r['id'] != str(transaksi_id)]
-                request.session['riwayat_staf'] = riwayat
-                request.session.modified = True
-                messages.success(request, f"Riwayat {transaksi['tipe']} dari {transaksi['member_name']} berhasil dihapus.")
+    riwayat = request.session.get('riwayat_staf', [])
+    transaksi = next((r for r in riwayat if r['id'] == str(transaksi_id)), None)
+
+    if transaksi:
+        if not _can_delete_transaction(transaksi):
+            messages.error(request, _delete_error_message(transaksi))
         else:
-            messages.error(request, "Riwayat tidak ditemukan.")
-            
+            request.session['riwayat_staf'] = [r for r in riwayat if r['id'] != str(transaksi_id)]
+            request.session.modified = True
+            messages.success(
+                request,
+                f"Riwayat {transaksi['tipe']} dari {transaksi['member_name']} berhasil dihapus.",
+            )
+    else:
+        messages.error(request, 'Riwayat tidak ditemukan.')
+
     return redirect('laporan:list')
