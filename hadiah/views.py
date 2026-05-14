@@ -1,19 +1,19 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from .models import Penyedia, Hadiah, generate_kode_hadiah
-
+from django.db import connection
 
 # ── helper ──────────────────────────────────────────────────────────────────
+def dictfetchall(cursor):
+    """
+    Fungsi bantuan untuk mengubah hasil cursor menjadi list of dictionaries.
+    """
+    columns = [col[0] for col in cursor.description]
+    return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
 def staf_required(view_func):
-    """
-    Decorator: hanya staf yang boleh akses.
-    TODO: aktifkan pengecekan autentikasi setelah modul auth selesai dibangun.
-    Saat ini di-bypass untuk mode dummy/development.
-    """
     def wrapper(request, *args, **kwargs):
-        # Auth bypass — dummy mode, aktifkan kembali setelah auth selesai
         # if not request.user.is_authenticated:
         #     return redirect('main:login')
         return view_func(request, *args, **kwargs)
@@ -21,25 +21,68 @@ def staf_required(view_func):
     return wrapper
 
 
+def generate_kode_hadiah():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT kode_hadiah FROM aeromiles.hadiah ORDER BY kode_hadiah DESC LIMIT 1;")
+        row = cursor.fetchone()
+        if not row:
+            return 'RWD-001'
+        last_kode = row[0]
+        try:
+            num = int(last_kode.split('-')[1]) + 1
+        except (IndexError, ValueError):
+            cursor.execute("SELECT COUNT(*) FROM aeromiles.hadiah;")
+            count = cursor.fetchone()[0]
+            num = count + 1
+        return f'RWD-{num:03d}'
+
+
 # ── R: list hadiah ───────────────────────────────────────────────────────────
 @staf_required
 def hadiah_list(request):
     today = timezone.now().date()
-    qs = Hadiah.objects.select_related('id_penyedia').all()
-
+    
     filter_penyedia = request.GET.get('penyedia', '')
     filter_status   = request.GET.get('status', '')
 
-    if filter_penyedia:
-        qs = qs.filter(id_penyedia__id=filter_penyedia)
-    if filter_status == 'aktif':
-        qs = qs.filter(valid_start_date__lte=today, program_end__gte=today)
-    elif filter_status == 'expired':
-        qs = qs.filter(program_end__lt=today)
+    with connection.cursor() as cursor:
+        # Get penyedia list for dropdown
+        cursor.execute("""
+            SELECT p.id, m.nama_mitra 
+            FROM aeromiles.penyedia p
+            LEFT JOIN aeromiles.mitra m ON p.id = m.id_penyedia
+            ORDER BY m.nama_mitra;
+        """)
+        penyedia_list = dictfetchall(cursor)
+
+        # Base query for hadiah
+        query = """
+            SELECT h.*, m.nama_mitra 
+            FROM aeromiles.hadiah h
+            LEFT JOIN aeromiles.mitra m ON h.id_penyedia = m.id_penyedia
+            WHERE 1=1
+        """
+        params = []
+
+        if filter_penyedia:
+            query += " AND h.id_penyedia = %s"
+            params.append(filter_penyedia)
+            
+        if filter_status == 'aktif':
+            query += " AND h.valid_start_date <= %s AND h.program_end >= %s"
+            params.extend([today, today])
+        elif filter_status == 'expired':
+            query += " AND h.program_end < %s"
+            params.append(today)
+
+        query += " ORDER BY h.kode_hadiah ASC"
+        
+        cursor.execute(query, params)
+        hadiah_list_qs = dictfetchall(cursor)
 
     return render(request, 'hadiah/list.html', {
-        'hadiah_list': qs,
-        'penyedia_list': Penyedia.objects.all(),
+        'hadiah_list': hadiah_list_qs,
+        'penyedia_list': penyedia_list,
         'filter_penyedia': filter_penyedia,
         'filter_status': filter_status,
         'today': today,
@@ -50,7 +93,14 @@ def hadiah_list(request):
 @staf_required
 @require_http_methods(['GET', 'POST'])
 def hadiah_create(request):
-    penyedia_list = Penyedia.objects.all()
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT p.id, m.nama_mitra 
+            FROM aeromiles.penyedia p
+            LEFT JOIN aeromiles.mitra m ON p.id = m.id_penyedia
+            ORDER BY m.nama_mitra;
+        """)
+        penyedia_list = dictfetchall(cursor)
 
     if request.method == 'POST':
         nama             = request.POST.get('nama', '').strip()
@@ -76,15 +126,13 @@ def hadiah_create(request):
             return redirect('hadiah:hadiah_list')
 
         kode = generate_kode_hadiah()
-        Hadiah.objects.create(
-            kode_hadiah=kode,
-            nama=nama,
-            id_penyedia=get_object_or_404(Penyedia, id=id_penyedia_val),
-            miles=int(miles),
-            deskripsi=deskripsi,
-            valid_start_date=valid_start_date,
-            program_end=program_end,
-        )
+        
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO aeromiles.hadiah (kode_hadiah, nama, id_penyedia, miles, deskripsi, valid_start_date, program_end)
+                VALUES (%s, %s, %s, %s, %s, %s, %s);
+            """, [kode, nama, id_penyedia_val, int(miles), deskripsi, valid_start_date, program_end])
+            
         messages.success(request, f'Hadiah "{nama}" berhasil ditambahkan dengan kode {kode}.')
         return redirect('hadiah:hadiah_list')
 
@@ -98,8 +146,29 @@ def hadiah_create(request):
 @staf_required
 @require_http_methods(['GET', 'POST'])
 def hadiah_update(request, kode_hadiah):
-    hadiah        = get_object_or_404(Hadiah, kode_hadiah=kode_hadiah)
-    penyedia_list = Penyedia.objects.all()
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT h.*, m.nama_mitra 
+            FROM aeromiles.hadiah h
+            LEFT JOIN aeromiles.mitra m ON h.id_penyedia = m.id_penyedia
+            WHERE h.kode_hadiah = %s;
+        """, [kode_hadiah])
+        hadiah_rows = dictfetchall(cursor)
+        if not hadiah_rows:
+            messages.error(request, 'Hadiah tidak ditemukan.')
+            return redirect('hadiah:hadiah_list')
+        hadiah = hadiah_rows[0]
+        
+        # We must make valid_start_date and program_end act like proper dates/strings for the template if needed
+        # Postgres driver usually converts them to datetime.date
+        
+        cursor.execute("""
+            SELECT p.id, m.nama_mitra 
+            FROM aeromiles.penyedia p
+            LEFT JOIN aeromiles.mitra m ON p.id = m.id_penyedia
+            ORDER BY m.nama_mitra;
+        """)
+        penyedia_list = dictfetchall(cursor)
 
     if request.method == 'POST':
         nama             = request.POST.get('nama', '').strip()
@@ -124,15 +193,14 @@ def hadiah_update(request, kode_hadiah):
                 messages.error(request, e)
             return redirect('hadiah:hadiah_list')
 
-        hadiah.nama             = nama
-        hadiah.id_penyedia      = get_object_or_404(Penyedia, id=id_penyedia_val)
-        hadiah.miles            = int(miles)
-        hadiah.deskripsi        = deskripsi
-        hadiah.valid_start_date = valid_start_date
-        hadiah.program_end      = program_end
-        hadiah.save()
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE aeromiles.hadiah 
+                SET nama = %s, id_penyedia = %s, miles = %s, deskripsi = %s, valid_start_date = %s, program_end = %s
+                WHERE kode_hadiah = %s;
+            """, [nama, id_penyedia_val, int(miles), deskripsi, valid_start_date, program_end, kode_hadiah])
 
-        messages.success(request, f'Hadiah "{hadiah.nama}" berhasil diperbarui.')
+        messages.success(request, f'Hadiah "{nama}" berhasil diperbarui.')
         return redirect('hadiah:hadiah_list')
 
     return render(request, 'hadiah/form.html', {
@@ -145,13 +213,22 @@ def hadiah_update(request, kode_hadiah):
 @staf_required
 @require_http_methods(['POST'])
 def hadiah_delete(request, kode_hadiah):
-    hadiah = get_object_or_404(Hadiah, kode_hadiah=kode_hadiah)
+    today = timezone.now().date()
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM aeromiles.hadiah WHERE kode_hadiah = %s;", [kode_hadiah])
+        row = cursor.fetchone()
+        if not row:
+            messages.error(request, 'Hadiah tidak ditemukan.')
+            return redirect('hadiah:hadiah_list')
+            
+        columns = [col[0] for col in cursor.description]
+        hadiah = dict(zip(columns, row))
+        
+        if hadiah['program_end'] >= today:
+            messages.error(request, f'Hadiah "{hadiah["nama"]}" tidak dapat dihapus karena belum berakhir.')
+            return redirect('hadiah:hadiah_list')
 
-    if not hadiah.is_expired():
-        messages.error(request, f'Hadiah "{hadiah.nama}" tidak dapat dihapus karena belum berakhir.')
-        return redirect('hadiah:hadiah_list')
-
-    nama = hadiah.nama
-    hadiah.delete()
-    messages.success(request, f'Hadiah "{nama}" berhasil dihapus.')
+        cursor.execute("DELETE FROM aeromiles.hadiah WHERE kode_hadiah = %s;", [kode_hadiah])
+        
+    messages.success(request, f'Hadiah "{hadiah["nama"]}" berhasil dihapus.')
     return redirect('hadiah:hadiah_list')
