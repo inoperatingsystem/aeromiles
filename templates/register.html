@@ -100,9 +100,9 @@
                                 <label class="form-label fw-medium small">Kode Maskapai <span class="text-danger">*</span></label>
                                 <select name="kode_maskapai" class="form-select form-select-sm">
                                     <option value="">Pilih Maskapai</option>
-                                    <option value="GA">GA - Garuda Indonesia</option>
-                                    <option value="SQ">SQ - Singapore Airlines</option>
-                                    <option value="MH">MH - Malaysia Airlines</option>
+                                    {% for m in maskapai_list %}
+                                        <option value="{{ m.kode_maskapai }}">{{ m.kode_maskapai }} - {{ m.nama_maskapai }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                         </div>

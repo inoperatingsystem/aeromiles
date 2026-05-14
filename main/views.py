@@ -220,8 +220,15 @@ def register_view(request):
                     messages.error(request, f"{field}: {error}")
     else:
         form = RegisterForm()
+    
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT kode_maskapai, nama_maskapai FROM maskapai ORDER BY nama_maskapai")
+        maskapai_list = dictfetchall(cursor)
         
-    return render(request, 'register.html', {'form': form})
+    return render(request, 'register.html', {
+        'form': form,
+        'maskapai_list': maskapai_list
+    })
 
 @login_required(login_url='main:login')
 def dashboard_view(request):
