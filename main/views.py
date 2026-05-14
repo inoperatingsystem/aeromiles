@@ -140,16 +140,19 @@ def register_view(request):
 
             if role == 'staf':
                 domain = email.split('@')[-1]
-                allowed_domains = [
-                    'nusantaraair.com',
-                    'lionsky.com',
-                    'bumiairlines.com',
-                    'oziskies.com',
-                    'sakuraairways.com'
-                ]
-                if domain not in allowed_domains:
-                    messages.error(request, f'Email staf harus menggunakan domain resmi ({", ".join(allowed_domains)}).')
+                domain_to_maskapai = {
+                    'nusantaraair.com': 'NA',
+                    'lionsky.com': 'LS',
+                    'bumiairlines.com': 'BA',
+                    'oziskies.com': 'OZ',
+                    'sakuraairways.com': 'SA'
+                }
+                
+                if domain not in domain_to_maskapai:
+                    messages.error(request, f'Email staf harus menggunakan domain resmi ({", ".join(domain_to_maskapai.keys())}).')
                     return redirect('main:register')
+                
+                maskapai_code = domain_to_maskapai[domain]
 
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
@@ -165,15 +168,6 @@ def register_view(request):
                         messages.error(request, 'Tier belum tersedia. Hubungi admin untuk menambahkan data tier.')
                         return redirect('main:register')
                     tier_id = row[0]
-
-                maskapai_code = None
-                if role == 'staf':
-                    cursor.execute("SELECT kode_maskapai FROM maskapai WHERE kode_maskapai = %s", [data.get('kode_maskapai')])
-                    row = cursor.fetchone()
-                    if not row:
-                        messages.error(request, 'Kode maskapai tidak valid.')
-                        return redirect('main:register')
-                    maskapai_code = row[0]
 
                 cursor.execute("""
                     INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
