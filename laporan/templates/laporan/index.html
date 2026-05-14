@@ -14,7 +14,6 @@
     {% endfor %}
 {% endif %}
 
-<!-- Stats Cards -->
 <div class="row g-4 mb-4">
     <div class="col-md-4">
         <div class="card shadow-sm border-0 rounded-4">
@@ -65,7 +64,6 @@
     </div>
 </div>
 
-<!-- Tabs -->
 <ul class="nav nav-tabs border-0 gap-2 mb-3" id="laporanTab" role="tablist">
     <li class="nav-item" role="presentation">
         <button class="nav-link border active rounded-pill fw-medium custom-tab" id="riwayat-tab" data-bs-toggle="tab" data-bs-target="#riwayat" type="button" role="tab" aria-controls="riwayat" aria-selected="true">Riwayat Transaksi</button>
@@ -75,13 +73,10 @@
     </li>
 </ul>
 
-<!-- Tabs Content -->
 <div class="tab-content" id="laporanTabContent">
-    <!-- Tab Riwayat -->
     <div class="tab-pane fade show active" id="riwayat" role="tabpanel" aria-labelledby="riwayat-tab">
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-4">
-                <!-- Filter Dropdown -->
                 <div class="mb-4">
                     <form method="get" class="d-inline-block">
                         <select name="tipe" class="form-select form-select-sm text-muted rounded-pill px-3 py-2" onchange="this.form.submit()" style="width: auto; background-color: #f8f9fa; border: 1px solid #dee2e6;">
@@ -125,23 +120,26 @@
                                 <div class="fw-bold text-dark">{{ r.member_name }}</div>
                                 <div class="text-muted" style="font-size: 0.8rem;">{{ r.member_email }}</div>
                             </td>
-                            <td class="py-3 border-light fw-bold {% if r.miles > 0 %}text-success{% else %}text-danger{% endif %}">
-                                {% if r.miles > 0 %}+{% endif %}{{ r.miles|default:"0" }}
+                            <td class="py-3 border-light fw-bold {% if r.miles > 0 %}text-success{% else %}text-muted{% endif %}">
+                                {% if r.tipe == 'Klaim' %}
+                                    -
+                                {% else %}
+                                    {% if r.miles > 0 %}+{% endif %}{{ r.miles|default:"0" }}
+                                {% endif %}
                             </td>
                             <td class="py-3 border-light text-muted" style="font-size: 0.85rem;">
-                                {{ r.waktu }}
+                                {{ r.waktu|date:"d M Y, H:i" }}
                             </td>
                             <td class="py-3 border-light text-center pe-3">
                                 {% if r.can_delete %}
-                                <button type="button" class="btn btn-link text-danger p-0" data-bs-toggle="modal" data-bs-target="#hapusModal{{ r.id }}" title="Hapus Riwayat">
+                                <button type="button" class="btn btn-link text-danger p-0" data-bs-toggle="modal" data-bs-target="#hapusModal{{ forloop.counter }}" title="Hapus Riwayat">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
                                       <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
                                       <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
                                     </svg>
                                 </button>
                                 
-                                <!-- Modal Hapus -->
-                                <div class="modal fade" id="hapusModal{{ r.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal fade" id="hapusModal{{ forloop.counter }}" tabindex="-1" aria-hidden="true">
                                     <div class="modal-dialog modal-dialog-centered">
                                         <div class="modal-content border-0 shadow rounded-4 text-start">
                                             <div class="modal-body p-4">
@@ -179,7 +177,6 @@
         </div>
     </div>
     
-    <!-- Tab Top Member -->
     <div class="tab-pane fade" id="top" role="tabpanel" aria-labelledby="top-tab">
         <div class="card shadow-sm border-0 rounded-4">
             <div class="card-body p-4">
