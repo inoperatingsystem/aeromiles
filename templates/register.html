@@ -35,7 +35,7 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label fw-medium small">Email <span class="text-danger">*</span></label>
-                            <input type="email" name="email" class="form-control form-control-sm" required>
+                            <input type="email" name="email" class="form-control form-control-sm" value="{{ request.POST.email|default:'' }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Password <span class="text-danger">*</span></label>
@@ -52,59 +52,51 @@
                         <div class="col-md-4">
                             <label class="form-label fw-medium small">Salutation <span class="text-danger">*</span></label>
                             <select name="salutation" class="form-select form-select-sm" required>
-                                <option value="Mr.">Mr.</option>
-                                <option value="Mrs.">Mrs.</option>
-                                <option value="Ms.">Ms.</option>
+                                <option value="Mr." {% if request.POST.salutation == 'Mr.' %}selected{% endif %}>Mr.</option>
+                                <option value="Mrs." {% if request.POST.salutation == 'Mrs.' %}selected{% endif %}>Mrs.</option>
+                                <option value="Ms." {% if request.POST.salutation == 'Ms.' %}selected{% endif %}>Ms.</option>
                             </select>
                         </div>
                         <div class="col-md-8"></div>
 
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Nama Depan-Tengah <span class="text-danger">*</span></label>
-                            <input type="text" name="first_mid_name" class="form-control form-control-sm" required>
+                            <input type="text" name="first_mid_name" class="form-control form-control-sm" value="{{ request.POST.first_mid_name|default:'' }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Nama Belakang <span class="text-danger">*</span></label>
-                            <input type="text" name="last_name" class="form-control form-control-sm" required>
+                            <input type="text" name="last_name" class="form-control form-control-sm" value="{{ request.POST.last_name|default:'' }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Country Code <span class="text-danger">*</span></label>
                             <select name="country_code" class="form-select form-select-sm" required>
-                                <option value="+62">+62 (Indonesia)</option>
-                                <option value="+60">+60 (Malaysia)</option>
-                                <option value="+65">+65 (Singapore)</option>
+                                <option value="+62" {% if request.POST.country_code == '+62' %}selected{% endif %}>+62 (Indonesia)</option>
+                                <option value="+60" {% if request.POST.country_code == '+60' %}selected{% endif %}>+60 (Malaysia)</option>
+                                <option value="+65" {% if request.POST.country_code == '+65' %}selected{% endif %}>+65 (Singapore)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Nomor HP <span class="text-danger">*</span></label>
-                            <input type="text" name="phone_number" class="form-control form-control-sm" required>
+                            <input type="text" name="phone_number" class="form-control form-control-sm" value="{{ request.POST.phone_number|default:'' }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Tanggal Lahir <span class="text-danger">*</span></label>
-                            <input type="date" name="dob" class="form-control form-control-sm" required>
+                            <input type="date" name="dob" class="form-control form-control-sm" value="{{ request.POST.dob|default:'' }}" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-medium small">Kewarganegaraan <span class="text-danger">*</span></label>
                             <select name="nationality" class="form-select form-select-sm" required>
-                                <option value="Indonesia">Indonesia</option>
-                                <option value="Malaysia">Malaysia</option>
-                                <option value="Singapore">Singapore</option>
+                                <option value="Indonesia" {% if request.POST.nationality == 'Indonesia' %}selected{% endif %}>Indonesia</option>
+                                <option value="Malaysia" {% if request.POST.nationality == 'Malaysia' %}selected{% endif %}>Malaysia</option>
+                                <option value="Singapore" {% if request.POST.nationality == 'Singapore' %}selected{% endif %}>Singapore</option>
                             </select>
                         </div>
                     </div>
 
                     <div id="stafFields" style="display: none;">
-                        <h6 class="fw-bold mt-4 mb-3">Data Staf</h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-medium small">Kode Maskapai <span class="text-danger">*</span></label>
-                                <select name="kode_maskapai" class="form-select form-select-sm">
-                                    <option value="">Pilih Maskapai</option>
-                                    <option value="GA">GA - Garuda Indonesia</option>
-                                    <option value="SQ">SQ - Singapore Airlines</option>
-                                    <option value="MH">MH - Malaysia Airlines</option>
-                                </select>
-                            </div>
+                        <h6 class="fw-bold mt-4 mb-3"></h6>
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="bi bi-info-circle me-1"></i> Maskapai Anda akan ditentukan secara otomatis berdasarkan domain email.
                         </div>
                     </div>
 
@@ -123,16 +115,12 @@
 <script>
     const roleRadios = document.querySelectorAll('input[name="role"]');
     const stafFields = document.getElementById('stafFields');
-    const maskapaiInput = document.querySelector('select[name="kode_maskapai"]');
-
     roleRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if(e.target.value === 'staf') {
                 stafFields.style.display = 'block';
-                maskapaiInput.required = true;
             } else {
                 stafFields.style.display = 'none';
-                maskapaiInput.required = false;
             }
         });
     });

@@ -1,7 +1,7 @@
 import random
 from types import SimpleNamespace
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib import messages
@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 
 from django.db import connection
-from .models import Pengguna, Member, Staf, Identitas, Tier, Maskapai
+from .models import Pengguna, Member, Staf
 from .forms import RegisterForm, ProfileForm
 from .utils import dictfetchall, dictfetchone
 
@@ -38,7 +38,6 @@ def _get_member(request):
         """, [pengguna.email])
         row = dictfetchone(cursor)
         if row:
-            # Rename FK fields to use _id suffix for Django model compatibility
             data = {k: v for k, v in row.items() if k != 'tier_nama'}
             if 'email' in data: data['email_id'] = data.pop('email')
             if 'id_tier' in data: data['id_tier_id'] = data.pop('id_tier')
@@ -97,8 +96,27 @@ def login_view(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         user = authenticate(request, username=email, password=password)
+        
         if user is not None:
+            domain = email.split('@')[-1]
+            allowed_staff_domains = [
+                'nusantaraair.com',
+                'lionsky.com',
+                'bumiairlines.com',
+                'oziskies.com',
+                'sakuraairways.com'
+            ]
+            
+            role_target = 'staf' if domain in allowed_staff_domains else 'member'
+            
+            with connection.cursor() as cursor:
+                cursor.execute(f"SELECT 1 FROM {role_target} WHERE email = %s", [email])
+                if not cursor.fetchone():
+                    messages.error(request, f"Login gagal. Email Anda menggunakan domain {role_target}, tetapi tidak terdaftar di sistem {role_target}.")
+                    return render(request, 'login.html')
+
             login(request, user)
+            request.session['user_role'] = role_target
             return redirect('main:dashboard')
         else:
             messages.error(request, 'Email atau password salah.')
@@ -120,6 +138,22 @@ def register_view(request):
             email = data.get('email')
             password = data.get('password')
 
+            if role == 'staf':
+                domain = email.split('@')[-1]
+                domain_to_maskapai = {
+                    'nusantaraair.com': 'NA',
+                    'lionsky.com': 'LS',
+                    'bumiairlines.com': 'BA',
+                    'oziskies.com': 'OZ',
+                    'sakuraairways.com': 'SA'
+                }
+                
+                if domain not in domain_to_maskapai:
+                    messages.error(request, f'Email staf harus menggunakan domain resmi ({", ".join(domain_to_maskapai.keys())}).')
+                    return redirect('main:register')
+                
+                maskapai_code = domain_to_maskapai[domain]
+
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1 FROM pengguna WHERE email = %s", [email])
                 if cursor.fetchone():
@@ -134,15 +168,6 @@ def register_view(request):
                         messages.error(request, 'Tier belum tersedia. Hubungi admin untuk menambahkan data tier.')
                         return redirect('main:register')
                     tier_id = row[0]
-
-                maskapai_code = None
-                if role == 'staf':
-                    cursor.execute("SELECT kode_maskapai FROM maskapai WHERE kode_maskapai = %s", [data.get('kode_maskapai')])
-                    row = cursor.fetchone()
-                    if not row:
-                        messages.error(request, 'Kode maskapai tidak valid.')
-                        return redirect('main:register')
-                    maskapai_code = row[0]
 
                 cursor.execute("""
                     INSERT INTO pengguna (email, password, salutation, first_mid_name, last_name, country_code, mobile_number, tanggal_lahir, kewarganegaraan)
@@ -189,8 +214,15 @@ def register_view(request):
                     messages.error(request, f"{field}: {error}")
     else:
         form = RegisterForm()
+    
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT kode_maskapai, nama_maskapai FROM maskapai ORDER BY nama_maskapai")
+        maskapai_list = dictfetchall(cursor)
         
-    return render(request, 'register.html', {'form': form})
+    return render(request, 'register.html', {
+        'form': form,
+        'maskapai_list': maskapai_list
+    })
 
 @login_required(login_url='main:login')
 def dashboard_view(request):
@@ -199,10 +231,23 @@ def dashboard_view(request):
         messages.error(request, 'Data pengguna tidak ditemukan. Silakan login ulang.')
         return redirect('main:login')
 
-    member = _get_member(request)
-    staf = _get_staf(request)
+    role = request.session.get('user_role')
+    
+    if not role:
+        member = _get_member(request)
+        staf = _get_staf(request)
+        role = 'member' if member else 'staf' if staf else 'guest'
+    else:
+        member = _get_member(request) if role == 'member' else None
+        staf = _get_staf(request) if role == 'staf' else None
+        
+        if role == 'member' and not member:
+            messages.error(request, 'Profil member tidak ditemukan.')
+            return redirect('main:login')
+        if role == 'staf' and not staf:
+            messages.error(request, 'Profil staf tidak ditemukan.')
+            return redirect('main:login')
 
-    role = 'member' if member else 'staf' if staf else 'guest'
     context = {
         'role': role,
         'nama_lengkap': pengguna.full_name,
