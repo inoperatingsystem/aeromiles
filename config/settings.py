@@ -114,15 +114,18 @@ if database_url:
         }
     }
 else:
-    # Fallback untuk lokal kalau lupa set DATABASE_URL
+    # Fallback untuk lokal (Docker Compose)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'aeromiles_db',
-            'USER': 'aeromiles_user',
-            'PASSWORD': 'aeromiles_password',
-            'HOST': 'localhost',
-            'PORT': '5432',
+            'NAME': os.getenv('POSTGRES_DB', 'aeromiles_db'),
+            'USER': os.getenv('POSTGRES_USER', 'aeromiles_user'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'aeromiles_password'),
+            'HOST': os.getenv('DB_HOST', 'db'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {
+                'options': '-c search_path=aeromiles,public',
+            },
         }
     }
 
