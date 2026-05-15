@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
-from django.db import connection, transaction
+from django.db import connection, transaction, DatabaseError
 
 def _dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
@@ -99,8 +99,7 @@ def transfer_create(request):
             jumlah_miles = int(jumlah_miles_str)
             if jumlah_miles <= 0:
                 errors.append("Jumlah miles harus lebih dari 0.")
-            elif jumlah_miles > member.award_miles:
-                errors.append("Award miles tidak mencukupi.")
+
         except ValueError:
             errors.append("Jumlah miles tidak valid.")
             
@@ -110,28 +109,25 @@ def transfer_create(request):
         return redirect('transfer:transfer_list')
         
     try:
-        with transaction.atomic():
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1 FROM MEMBER WHERE email = %s", [penerima_email])
-                if not cursor.fetchone():
-                    messages.error(request, 'Email penerima belum terdaftar sebagai member.')
-                    return redirect('transfer:transfer_list')
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM MEMBER WHERE email = %s", [penerima_email])
+            if not cursor.fetchone():
+                messages.error(request, 'Email penerima belum terdaftar sebagai member.')
+                return redirect('transfer:transfer_list')
 
-                cursor.execute("""
-                    INSERT INTO TRANSFER (email_member_1, email_member_2, timestamp, jumlah, catatan)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, [member.email_id, penerima_email, timezone.now(), jumlah_miles, catatan or None])
+            cursor.execute("""
+                INSERT INTO TRANSFER (email_member_1, email_member_2, timestamp, jumlah, catatan)
+                VALUES (%s, %s, %s, %s, %s)
+            """, [member.email_id, penerima_email, timezone.now(), jumlah_miles, catatan or None])
                 
-                cursor.execute("""
-                    UPDATE MEMBER SET award_miles = COALESCE(award_miles, 0) - %s WHERE email = %s
-                """, [jumlah_miles, member.email_id])
-                
-                cursor.execute("""
-                    UPDATE MEMBER SET award_miles = COALESCE(award_miles, 0) + %s WHERE email = %s
-                """, [jumlah_miles, penerima_email])
-                
-        messages.success(request, f"Berhasil mentransfer {jumlah_miles} miles ke {penerima_email}.")
+        messages.success(request, f'SUKSES: Transfer {jumlah_miles} miles dari "{member.email_id}" ke "{penerima_email}" berhasil dicatat.')
+
+    except DatabaseError as e:
+        raw_msg = str(e).split('\n')[0].strip()
+        clean_msg = raw_msg.split('ERROR:  ')[-1] if 'ERROR:  ' in raw_msg else raw_msg
+        messages.error(request, clean_msg)
+        
     except Exception as e:
-        messages.error(request, 'Terjadi kesalahan sistem dalam memproses transfer Anda.')
+        messages.error(request, f'Terjadi kesalahan sistem: {str(e)}')
 
     return redirect('transfer:transfer_list')
