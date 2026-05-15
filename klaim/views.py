@@ -8,6 +8,7 @@ from django.db import connection
 MASKAPAI_CHOICES = []
 BANDARA_CHOICES = []
 KELAS_CHOICES = [('Economy', 'Economy'), ('Business', 'Business'), ('First', 'First')]
+from django.db import connection
 
 def _dictfetchall(cursor):
     """Fungsi helper untuk mereturn dictionary dari raw SQL cursor."""
@@ -329,6 +330,7 @@ def staf_klaim_action(request, no_klaim):
     with connection.cursor() as cursor:
         cursor.execute("SELECT status_penerimaan FROM CLAIM_MISSING_MILES WHERE id = %s", [no_klaim])
         klaim_row = cursor.fetchone()
+
         
         if not klaim_row:
             messages.error(request, 'Klaim tidak ditemukan.')
@@ -339,12 +341,21 @@ def staf_klaim_action(request, no_klaim):
             return redirect('klaim:staf_list')
 
         if action == 'setujui':
+            if hasattr(connection.connection, 'notices'):
+                del connection.connection.notices[:]
+                
             cursor.execute("""
                 UPDATE CLAIM_MISSING_MILES 
                 SET status_penerimaan = 'Disetujui', email_staf = %s 
                 WHERE id = %s
             """, [staf.email_id, no_klaim])
-            messages.success(request, f'Klaim {no_klaim} berhasil disetujui.')
+            
+            if hasattr(connection.connection, 'notices') and connection.connection.notices:
+                for notice in connection.connection.notices:
+                    clean_notice = notice.replace('NOTICE:  ', '').strip()
+                    messages.success(request, clean_notice)
+            else:
+                messages.success(request, f'Klaim {no_klaim} berhasil disetujui.')
         elif action == 'tolak':
             cursor.execute("""
                 UPDATE CLAIM_MISSING_MILES 

@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from main.utils import dictfetchall
 
 def staf_required(view_func):
     """Decorator untuk memastikan user adalah staf yang terautentikasi."""
@@ -21,29 +22,7 @@ def staf_required(view_func):
 @require_http_methods(['GET'])
 def laporan_list(request):
     
-    # Ambil data member dengan top miles dari database
-    top_members = []
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                ROW_NUMBER() OVER (ORDER BY m.total_miles DESC) as rank,
-                p.first_mid_name || ' ' || p.last_name as member_name,
-                m.email as member_email,
-                m.total_miles,
-                COUNT(*) as jumlah_transaksi
-            FROM aeromiles.member m
-            JOIN aeromiles.pengguna p ON m.email = p.email
-            GROUP BY m.email, p.first_mid_name, p.last_name, m.total_miles
-            ORDER BY m.total_miles DESC
-            LIMIT 10
-        """)
-        columns = [col[0] for col in cursor.description]
-        top_members = [dict(zip(columns, row)) for row in cursor.fetchall()]
-    
-    # Format top members
-    for member in top_members:
-        member['total_miles_str'] = f"{member['total_miles']:,}"
-    
+    # Ambil riwayat transaksi dari member
     riwayat = []
     with connection.cursor() as cursor:
         cursor.execute("""
@@ -140,9 +119,36 @@ def laporan_list(request):
         'total_klaim': str(total_klaim),
     }
     
+    # Ambil Top 5 Members dari Stored Procedure
+    top_members_db = []
+    with connection.cursor() as cursor:
+        if hasattr(connection.connection, 'notices'):
+            del connection.connection.notices[:]
+            
+        cursor.execute("SELECT * FROM aeromiles.get_top_5_member()")
+        rows = dictfetchall(cursor)
+        
+        # Tampilkan pesan dari Stored Procedure
+        if hasattr(connection.connection, 'notices') and connection.connection.notices:
+            for notice in connection.connection.notices:
+                clean_notice = notice.replace('NOTICE:  ', '').strip()
+                # Hindari pesan duplikat jika view dirender berulang kali
+                if clean_notice not in [m.message for m in messages.get_messages(request)]:
+                    messages.success(request, clean_notice)
+
+        # Ubah format hasil query agar sesuai dengan template laporan
+        for index, row in enumerate(rows):
+            top_members_db.append({
+                'rank': index + 1,
+                'member_name': row['email'], # fallback ke email jika nama tidak diambil di SP
+                'member_email': row['email'],
+                'total_miles': f"{row['total_miles']:,}",
+                'jumlah_transaksi': '-', # Karena SP tidak menghitung jumlah transaksi
+            })
+
     return render(request, 'laporan/index.html', {
         'riwayat': riwayat,
-        'top_members': top_members,
+        'top_members': top_members_db,
         'stats': stats,
         'tipe_filter': tipe_filter,
     })
