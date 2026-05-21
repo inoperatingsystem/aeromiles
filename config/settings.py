@@ -109,6 +109,7 @@ if database_url:
     DATABASES['default']['OPTIONS'] = {
         **DATABASES['default'].get('OPTIONS', {}),
         'options': '-c search_path=aeromiles,public',
+        'sslmode': 'require',
     }
 else:
     # Fallback untuk lokal (Docker Compose)
