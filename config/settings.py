@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from urllib.parse import urlparse, parse_qsl
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -38,6 +39,10 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8000',
     'http://0.0.0.0:8000',
 ]
+
+RENDER_EXTERNAL_URL = os.getenv('RENDER_EXTERNAL_URL')
+if RENDER_EXTERNAL_URL:
+    CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
 
 
 # Application definition
@@ -98,20 +103,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    tmpPostgres = urlparse(database_url)
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': tmpPostgres.path.replace('/', ''),
-            'USER': tmpPostgres.username,
-            'PASSWORD': tmpPostgres.password,
-            'HOST': tmpPostgres.hostname,
-            'PORT': tmpPostgres.port or 5432,
-            'OPTIONS': {
-                'options': '-c search_path=aeromiles,public',
-                **dict(parse_qsl(tmpPostgres.query))
-            },
-        }
+        'default': dj_database_url.parse(database_url)
+    }
+    DATABASES['default']['OPTIONS'] = {
+        **DATABASES['default'].get('OPTIONS', {}),
+        'options': '-c search_path=aeromiles,public',
     }
 else:
     # Fallback untuk lokal (Docker Compose)
